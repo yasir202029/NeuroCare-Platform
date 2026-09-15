@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
+export interface Report {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
   status: string;
+  clinicianName: string;
+  size: string;
 }

@@ -29,6 +29,13 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    'process.env.NEXT_PUBLIC_APP_URL': JSON.stringify(process.env.NEXT_PUBLIC_APP_URL ?? ''),
+    'process.env.NEXT_PUBLIC_PORTAL_URL': JSON.stringify(process.env.NEXT_PUBLIC_PORTAL_URL ?? ''),
+    'process.env.NEXT_PUBLIC_CLINICIAN_PORTAL_URL': JSON.stringify(process.env.NEXT_PUBLIC_CLINICIAN_PORTAL_URL ?? ''),
+    'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''),
+    'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''),
+  },
   plugins: [
     react(),
     tailwindcss(),

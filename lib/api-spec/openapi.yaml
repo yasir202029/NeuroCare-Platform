@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: platform
+    description: Shared dashboard and booking data
 paths:
   /healthz:
     get:
@@ -24,6 +26,167 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /platform/summary:
+    get:
+      operationId: getPlatformSummary
+      tags: [platform]
+      summary: Get portal summary metrics
+      responses:
+        "200":
+          description: Summary metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformSummary"
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [platform]
+      summary: List appointments
+      responses:
+        "200":
+          description: Appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      operationId: createAppointment
+      tags: [platform]
+      summary: Book an assessment appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [platform]
+      summary: List patients
+      responses:
+        "200":
+          description: Patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+  /assessments:
+    get:
+      operationId: listAssessments
+      tags: [platform]
+      summary: List assessments
+      responses:
+        "200":
+          description: Assessments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Assessment"
+    post:
+      operationId: createAssessment
+      tags: [platform]
+      summary: Create an assessment workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "201":
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+  /reports:
+    get:
+      operationId: listReports
+      tags: [platform]
+      summary: List reports
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+  /messages:
+    get:
+      operationId: listMessages
+      tags: [platform]
+      summary: List messages
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: createMessage
+      tags: [platform]
+      summary: Send a message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [platform]
+      summary: List uploaded documents
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [platform]
+      summary: List payment history
+      responses:
+        "200":
+          description: Payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +196,116 @@ components:
           type: string
       required:
         - status
+    PlatformSummary:
+      type: object
+      properties:
+        activePatients:
+          type: integer
+        pendingAssessments:
+          type: integer
+        upcomingAppointments:
+          type: integer
+        outstandingBalance:
+          type: number
+        unreadMessages:
+          type: integer
+      required: [activePatients, pendingAssessments, upcomingAppointments, outstandingBalance, unreadMessages]
+    Appointment:
+      type: object
+      properties:
+        id: { type: string }
+        patientName: { type: string }
+        patientId: { type: string }
+        clinicianName: { type: string }
+        type: { type: string }
+        date: { type: string }
+        time: { type: string }
+        status: { type: string }
+        location: { type: string }
+      required: [id, patientName, patientId, clinicianName, type, date, time, status, location]
+    AppointmentInput:
+      type: object
+      properties:
+        type: { type: string }
+        date: { type: string }
+        time: { type: string }
+        location: { type: string }
+      required: [type, date, time, location]
+    Patient:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        initials: { type: string }
+        assessment: { type: string }
+        status: { type: string }
+        progress: { type: integer }
+        lastActive: { type: string }
+      required: [id, name, email, initials, assessment, status, progress, lastActive]
+    Assessment:
+      type: object
+      properties:
+        id: { type: string }
+        patientName: { type: string }
+        type: { type: string }
+        stage: { type: string }
+        progress: { type: integer }
+        updatedAt: { type: string }
+        clinicianName: { type: string }
+      required: [id, patientName, type, stage, progress, updatedAt, clinicianName]
+    AssessmentInput:
+      type: object
+      properties:
+        patientId: { type: string }
+        type: { type: string }
+      required: [patientId, type]
+    Report:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        type: { type: string }
+        date: { type: string }
+        status: { type: string }
+        clinicianName: { type: string }
+        size: { type: string }
+      required: [id, title, type, date, status, clinicianName, size]
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        sender: { type: string }
+        subject: { type: string }
+        preview: { type: string }
+        time: { type: string }
+        unread: { type: boolean }
+        direction: { type: string }
+      required: [id, sender, subject, preview, time, unread, direction]
+    MessageInput:
+      type: object
+      properties:
+        subject: { type: string }
+        body: { type: string }
+      required: [subject, body]
+    Document:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string }
+        date: { type: string }
+        size: { type: string }
+        status: { type: string }
+      required: [id, name, category, date, size, status]
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        description: { type: string }
+        date: { type: string }
+        amount: { type: number }
+        status: { type: string }
+        invoice: { type: string }
+      required: [id, description, date, amount, status, invoice]
 
