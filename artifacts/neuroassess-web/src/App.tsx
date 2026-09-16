@@ -17,6 +17,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bell,
+  Bot,
+  BrainCircuit,
   CalendarDays,
   Check,
   ChevronDown,
@@ -44,6 +46,7 @@ import {
   Settings,
   ShieldCheck,
   Stethoscope,
+  Zap,
   UserRound,
   UsersRound,
   X,
@@ -125,6 +128,7 @@ const adminNav: { href: string; label: string; icon: IconType }[] = [
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/audit', label: 'Audit log', icon: NotebookTabs },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/ai-control', label: 'AI control centre', icon: BrainCircuit },
 ];
 
 function Logo({ light = false }: { light?: boolean }) {
@@ -338,7 +342,39 @@ function ClinicianAssessments({ data }: { data: PortalDataType }) { const [show,
 function TasksPage() { return <div className="animate-rise"><PageHeading eyebrow="Your work queue" title="Tasks" text="The small things that keep good care moving." action={<Button testId="button-add-task">Add task <ArrowRight size={15} /></Button>} /><div className="grid gap-6 lg:grid-cols-3"><TaskColumn title="Today" tasks={[['Review Oliver Grant’s assessment', 'Patient review'], ['Reply to Maya’s message', 'Patient message']]} /><TaskColumn title="This week" tasks={[['Sign Noah Bennett’s report', 'Report'], ['Schedule feedback appointment', 'Appointment']]} /><TaskColumn title="Completed" tasks={[['Review Amelia Wright’s questionnaires', 'Patient review'], ['Upload care summary', 'Report']]} /></div></div>; }
 function TaskColumn({ title, tasks }: { title: string; tasks: string[][] }) { return <SectionCard title={title}><div className="grid gap-2">{tasks.map(([name, type]) => <button key={name} className="flex gap-3 rounded-xl border border-transparent p-3 text-left hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary)/.3)]" data-testid={`task-${name.slice(0, 12).replaceAll(' ', '-').toLowerCase()}`}><span className="mt-0.5 h-4 w-4 shrink-0 rounded border border-[hsl(var(--primary))]" /><span><span className="block text-sm font-semibold">{name}</span><span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">{type}</span></span></button>)}</div></SectionCard>; }
 
-function AdminPage({ path, data }: { path: string; data: PortalDataType }) { if (path === '/admin') return <AdminOverview data={data} />; if (path === '/admin/users') return <PatientsPage data={data} />; if (path === '/admin/appointments') return <AppointmentsPage data={data} />; if (path === '/admin/payments') return <PaymentsPage data={data} />; if (path === '/admin/reports') return <ReportsPage data={data} />; if (path === '/admin/settings') return <SettingsPage />; return <AuditPage />; }
+function AdminPage({ path, data }: { path: string; data: PortalDataType }) { if (path === '/admin') return <AdminOverview data={data} />; if (path === '/admin/users') return <PatientsPage data={data} />; if (path === '/admin/appointments') return <AppointmentsPage data={data} />; if (path === '/admin/payments') return <PaymentsPage data={data} />; if (path === '/admin/reports') return <ReportsPage data={data} />; if (path === '/admin/settings') return <SettingsPage />; if (path === '/admin/ai-control') return <AiControlCentre />; return <AuditPage />; }
+function AiControlCentre() {
+  const [provider, setProvider] = useState('OpenAI');
+  const [guardrails, setGuardrails] = useState(true);
+  const providers = [
+    { name: 'OpenAI', model: 'GPT-4.1', status: 'Connected', spend: '$184.20', colour: 'bg-emerald-500' },
+    { name: 'Anthropic', model: 'Claude 3.7 Sonnet', status: 'Ready', spend: '$96.40', colour: 'bg-orange-400' },
+    { name: 'Google', model: 'Gemini 2.5 Pro', status: 'Ready', spend: '$58.90', colour: 'bg-blue-500' },
+    { name: 'Ollama', model: 'Local clinical assistant', status: 'Local', spend: '$0.00', colour: 'bg-violet-500' },
+  ];
+  const selected = providers.find((item) => item.name === provider) ?? providers[0];
+  return <div className="animate-rise">
+    <PageHeading eyebrow="Super admin workspace" title="AI control centre" text="Govern providers, prompts and clinical safeguards from one audited workspace." action={<Button variant="secondary" testId="button-ai-audit">View audit log <NotebookTabs size={15} /></Button>} />
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatCard label="AI spend this month" value="$339.50" detail="12% under budget" icon={CreditCard} accent />
+      <StatCard label="Token usage" value="2.84M" detail="Across 1,429 requests" icon={Zap} />
+      <StatCard label="Guardrail checks" value="99.8%" detail="4 requests held for review" icon={ShieldCheck} />
+      <StatCard label="Active prompts" value="12" detail="3 updated this week" icon={FileText} />
+    </div>
+    <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
+      <SectionCard title="Provider routing" action={<span className="text-xs font-semibold text-[hsl(var(--primary))]">Secrets configured server-side</span>}>
+        <div className="grid gap-3">{providers.map((item) => <button key={item.name} onClick={() => setProvider(item.name)} className={`flex items-center gap-4 rounded-xl border p-4 text-left ${provider === item.name ? 'border-[hsl(var(--primary))] bg-[hsl(var(--secondary)/.5)]' : 'border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary)/.25)]'}`} data-testid={`button-ai-provider-${item.name.toLowerCase()}`}><span className={`h-2.5 w-2.5 rounded-full ${item.colour}`} /><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{item.name}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{item.model}</p></div><div className="text-right"><Status>{item.status}</Status><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{item.spend} MTD</p></div></button>)}</div>
+      </SectionCard>
+      <SectionCard title="Selected provider"><div className="rounded-xl bg-[hsl(var(--secondary)/.5)] p-5"><div className="flex items-start justify-between"><div><p className="text-lg font-semibold">{selected.name}</p><p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{selected.model}</p></div><Bot className="text-[hsl(var(--primary))]" /></div><div className="mt-6 grid grid-cols-2 gap-4 text-sm"><div><p className="text-xs text-[hsl(var(--muted-foreground))]">Default task</p><p className="mt-1 font-semibold">Clinical summaries</p></div><div><p className="text-xs text-[hsl(var(--muted-foreground))]">Monthly budget</p><p className="mt-1 font-semibold">$450.00</p></div></div><Button className="mt-6 w-full" testId="button-save-ai-provider">Save provider settings <ArrowRight size={15} /></Button></div></SectionCard>
+    </div>
+    <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <SectionCard title="Safety guardrails"><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-semibold">Clinical review required</p><p className="mt-1 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Hold diagnostic or medication recommendations for clinician approval.</p></div><button onClick={() => setGuardrails(!guardrails)} aria-pressed={guardrails} className={`relative h-7 w-12 rounded-full ${guardrails ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`} data-testid="button-toggle-guardrails"><span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${guardrails ? 'translate-x-6' : 'translate-x-1'}`} /></button></div><div className="mt-5 flex items-center gap-2 text-xs text-[hsl(var(--primary))]"><ShieldCheck size={14} /> PHI redaction enabled before external routing</div></SectionCard>
+      <SectionCard title="Prompt management"><div className="grid gap-3 text-sm"><div className="rounded-xl border border-[hsl(var(--border))] p-3"><p className="font-semibold">Clinical note summariser</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">v8 · reviewed 14 Sep · {provider}</p></div><div className="rounded-xl border border-[hsl(var(--border))] p-3"><p className="font-semibold">Patient coach check-in</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">v4 · reviewed 09 Sep · safety policy attached</p></div></div></SectionCard>
+      <SectionCard title="Recent audit events"><div className="grid gap-3 text-sm"><p><span className="font-semibold">Routing rule updated</span><br /><span className="text-xs text-[hsl(var(--muted-foreground))]">Jordan Smith · 18 minutes ago</span></p><p><span className="font-semibold">4 outputs held for review</span><br /><span className="text-xs text-[hsl(var(--muted-foreground))]">Guardrail service · Today</span></p><p><span className="font-semibold">Prompt v8 published</span><br /><span className="text-xs text-[hsl(var(--muted-foreground))]">Dr Farah Malik · Yesterday</span></p></div></SectionCard>
+    </div>
+  </div>;
+}
+
 function AdminOverview({ data }: { data: PortalDataType }) { return <div className="animate-rise"><PageHeading eyebrow="Platform overview" title="Good morning, Jordan." text="A high-level view of NeuroAssess UK today." action={<Button variant="secondary" testId="admin-export-button">Export activity <Download size={15} /></Button>} /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><StatCard label="Active patients" value={data.summary.activePatients} detail="Across all clinicians" icon={UsersRound} accent /><StatCard label="Pending assessments" value={data.summary.pendingAssessments} detail="7 awaiting allocation" icon={ClipboardCheck} /><StatCard label="Appointments" value={data.summary.upcomingAppointments} detail="Next 7 days" icon={CalendarDays} /><StatCard label="Outstanding balance" value={`£${data.summary.outstandingBalance}`} detail="Across open invoices" icon={CreditCard} /></div><div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><SectionCard title="Operational pulse"><div className="grid gap-6 sm:grid-cols-2"><div><p className="text-sm text-[hsl(var(--muted-foreground))]">Assessment completion</p><p className="mt-2 text-3xl font-semibold">74.6%</p><div className="mt-4 h-2 rounded-full bg-[hsl(var(--secondary))]"><div className="h-full w-3/4 rounded-full bg-[hsl(var(--primary))]" /></div></div><div><p className="text-sm text-[hsl(var(--muted-foreground))]">Report turnaround</p><p className="mt-2 text-3xl font-semibold">6.2 days</p><div className="mt-4 h-2 rounded-full bg-[hsl(var(--secondary))]"><div className="h-full w-[82%] rounded-full bg-[hsl(var(--accent))]" /></div></div></div></SectionCard><SectionCard title="Recent activity"><div className="grid gap-3 text-sm"><p><span className="font-semibold">Dr James Cole</span> completed a report <span className="text-xs text-[hsl(var(--muted-foreground))]">12 min ago</span></p><p><span className="font-semibold">Maya Thompson</span> sent a message <span className="text-xs text-[hsl(var(--muted-foreground))]">34 min ago</span></p><p><span className="font-semibold">New patient</span> created an account <span className="text-xs text-[hsl(var(--muted-foreground))]">1 hr ago</span></p></div></SectionCard></div></div>; }
 function AuditPage() { return <div className="animate-rise"><PageHeading eyebrow="Governance" title="Audit log" text="A transparent record of sensitive platform activity." /><SectionCard title="Recent activity"><div className="grid gap-2">{[['18 Jun, 10:42', 'Dr Farah Malik', 'Viewed Maya Thompson’s assessment'], ['18 Jun, 10:18', 'Jordan Smith', 'Updated payment status INV-1048-02'], ['18 Jun, 09:55', 'Dr James Cole', 'Uploaded Oliver Grant’s report'], ['17 Jun, 16:32', 'System', 'Patient account created']].map(([time, actor, action]) => <div key={time} className="grid gap-2 border-b border-[hsl(var(--border))] py-4 text-sm last:border-0 sm:grid-cols-[160px_180px_1fr]"><span className="mono text-xs text-[hsl(var(--muted-foreground))]">{time}</span><span className="font-semibold">{actor}</span><span>{action}</span></div>)}</div></SectionCard></div>; }
 function SettingsPage() { const [saved, setSaved] = useState(false); return <div className="animate-rise"><PageHeading eyebrow="Platform configuration" title="Settings" text="Set the defaults that keep the service consistent and safe." /><div className="grid gap-6 lg:grid-cols-2"><SectionCard title="General settings"><div className="grid gap-4"><Field label="Organisation name" placeholder="NeuroAssess UK" testId="input-setting-org" /><Field label="Support email" type="email" placeholder="hello@neuroassess.co.uk" testId="input-setting-email" /><label className="flex items-center justify-between rounded-xl border border-[hsl(var(--border))] p-4 text-sm"><span><span className="block font-semibold">Require two-factor authentication</span><span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">For all clinician accounts</span></span><input type="checkbox" defaultChecked className="h-4 w-4 accent-[hsl(var(--primary))]" data-testid="checkbox-two-factor" /></label></div><Button className="mt-6" onClick={() => setSaved(true)} testId="button-save-settings">Save settings <Check size={15} /></Button>{saved && <p className="mt-3 text-xs font-semibold text-[hsl(var(--primary))]">Settings saved.</p>}</SectionCard><SectionCard title="Security & privacy"><div className="grid gap-3">{['Data encrypted in transit and at rest', 'Automatic session timeout after 30 minutes', 'Audit logging enabled for clinical records'].map((x) => <div key={x} className="flex items-center gap-3 rounded-xl bg-[hsl(var(--secondary)/.4)] p-3 text-sm"><ShieldCheck size={17} className="text-[hsl(var(--primary))]" />{x}</div>)}</div></SectionCard></div></div>; }
@@ -378,6 +414,7 @@ function AppRouter() {
     <Route path="/admin/reports"><PortalLayout role="admin" /></Route>
     <Route path="/admin/audit"><PortalLayout role="admin" /></Route>
     <Route path="/admin/settings"><PortalLayout role="admin" /></Route>
+    <Route path="/admin/ai-control"><PortalLayout role="admin" /></Route>
     <Route component={NotFound} />
   </Switch>;
 }
