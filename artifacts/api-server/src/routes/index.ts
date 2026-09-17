@@ -7,6 +7,7 @@ import accessRouter from "./access";
 import recordsRouter from "./records";
 import questionnairesRouter from "./questionnaires";
 import intakeRouter from "./intake";
+import clinicianOperationsRouter from "./clinician-operations";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(accessRouter);
 router.use(recordsRouter);
 router.use(questionnairesRouter);
 router.use(intakeRouter);
+router.use(clinicianOperationsRouter);
 
 export default router;
