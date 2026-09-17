@@ -36,6 +36,7 @@ minimumReleaseAgeExclude:
 
 packages:
   - apps/*
+  - apps/mobile
   - packages/*
   - packages/clinical-consent
   - artifacts/*
