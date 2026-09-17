@@ -36,6 +36,11 @@ minimumReleaseAgeExclude:
 
 packages:
   - backend
+  - apps/*
+  - apps/mobile
+  - packages/*
+  - packages/clinical-consent
+  - packages/portal-routing
   - artifacts/*
   - lib/*
   - lib/integrations/*
