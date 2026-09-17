@@ -1,1 +1,4 @@
-export default function Page() { return <main><p>NeuroAssess</p><h1>patient portal</h1><p>This application is ready for authenticated, tenant-scoped workflows. Records appear only after secure data services are connected.</p></main>; }
+"use client";
+import { useState } from "react";
+const choices = ["Consultation recording", "AI clinical assistance"];
+export default function Page() { const [accepted, setAccepted] = useState<Record<string, boolean>>({}); return <main><p>NeuroAssess patient portal</p><h1>Your care, on your terms.</h1><p>Recording and AI-assisted clinical documentation remain off unless you give explicit consent. Your choices can be withdrawn at any time.</p><section>{choices.map((choice) => <label key={choice}><input type="checkbox" checked={Boolean(accepted[choice])} onChange={(event) => setAccepted({ ...accepted, [choice]: event.target.checked })} /> {choice}<small>Consent is saved only after your secure account and clinic record are connected.</small></label>)}</section><h2>Care requests</h2><p>Request a medication refill, follow-up, or medication review from your authenticated care record.</p></main>; }
