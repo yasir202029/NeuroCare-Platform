@@ -1,0 +1,17 @@
+import { Router } from 'express';
+import { Role, TeamQueueType, WorkflowStage } from '@prisma/client';
+import { z } from 'zod';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { asyncHandler } from '../../shared/http.js';
+import { completeTask, engineRules, engineStates, snapshot, transition } from './engine.service.js';
+const router = Router();
+router.use(requireAuth, requireRole(Role.ADMIN, Role.PSYCHIATRIST, Role.PRESCRIBER, Role.NURSE, Role.FINANCE));
+router.get('/', asyncHandler(async (_req, res) => res.json(await snapshot())));
+router.get('/states', (_req, res) => res.json({ states: engineStates }));
+router.get('/rules', (_req, res) => res.json({ rules: engineRules }));
+router.get('/events', asyncHandler(async (_req, res) => res.json((await snapshot()).events)));
+router.get('/tasks', asyncHandler(async (_req, res) => res.json((await snapshot()).tasks)));
+router.get('/workflows', asyncHandler(async (_req, res) => res.json((await snapshot()).workflow)));
+router.post('/workflows/transition', asyncHandler(async (req, res) => { const body = z.object({ patientId: z.string().cuid(), toStage: z.nativeEnum(WorkflowStage), reason: z.string().trim().min(1).max(1000), teamId: z.string().cuid().optional(), queue: z.object({ type: z.nativeEnum(TeamQueueType), title: z.string().trim().min(1).max(200), assignedToId: z.string().cuid().optional(), dueAt: z.coerce.date().optional() }).optional() }).parse(req.body); res.status(201).json(await transition({ ...body, actorId: req.user!.id })); }));
+router.post('/tasks/:id/complete', asyncHandler(async (req, res) => res.json(await completeTask({ taskId: String(req.params.id), actorId: req.user!.id }))));
+export default router;
