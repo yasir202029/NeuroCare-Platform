@@ -1,0 +1,1 @@
+export default function Page() { return <main><p>NeuroAssess</p><h1>super admin portal</h1><p>This application is ready for authenticated, tenant-scoped workflows. Records appear only after secure data services are connected.</p></main>; }
