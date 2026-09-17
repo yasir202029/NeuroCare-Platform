@@ -5,6 +5,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  uniqueIndex,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -14,6 +15,15 @@ import { z } from "zod/v4";
 const id = (name: string) => text(name).primaryKey();
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date());
+
+export const clinicsTable = pgTable("clinics", {
+  id: id("id"),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt,
+  updatedAt,
+});
 
 export const profilesTable = pgTable("profiles", {
   id: id("id"),
@@ -25,7 +35,19 @@ export const profilesTable = pgTable("profiles", {
   updatedAt,
 });
 
+
+export const clinicMembershipsTable = pgTable("clinic_memberships", {
+  id: id("id"),
+  clinicId: text("clinic_id").notNull(),
+  profileId: text("profile_id").notNull(),
+  role: text("role").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt,
+  updatedAt,
+}, (table) => [uniqueIndex("clinic_memberships_clinic_profile_idx").on(table.clinicId, table.profileId)]);
+
 export const patientsTable = pgTable("patients", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   profileId: text("profile_id").notNull(),
   dateOfBirth: date("date_of_birth", { mode: "string" }),
@@ -36,6 +58,7 @@ export const patientsTable = pgTable("patients", {
 });
 
 export const cliniciansTable = pgTable("clinicians", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   profileId: text("profile_id").notNull(),
   registrationNumber: text("registration_number"),
@@ -46,6 +69,7 @@ export const cliniciansTable = pgTable("clinicians", {
 });
 
 export const appointmentsTable = pgTable("appointments", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   patientId: text("patient_id").notNull(),
   clinicianId: text("clinician_id"),
@@ -59,6 +83,7 @@ export const appointmentsTable = pgTable("appointments", {
 });
 
 export const assessmentsTable = pgTable("assessments", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   patientId: text("patient_id").notNull(),
   clinicianId: text("clinician_id"),
@@ -71,6 +96,7 @@ export const assessmentsTable = pgTable("assessments", {
 });
 
 export const formsTable = pgTable("forms", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   assessmentId: text("assessment_id").notNull(),
   title: text("title").notNull(),
@@ -82,6 +108,7 @@ export const formsTable = pgTable("forms", {
 });
 
 export const reportsTable = pgTable("reports", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   assessmentId: text("assessment_id").notNull(),
   clinicianId: text("clinician_id").notNull(),
@@ -94,6 +121,7 @@ export const reportsTable = pgTable("reports", {
 });
 
 export const messagesTable = pgTable("messages", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   senderProfileId: text("sender_profile_id").notNull(),
   recipientProfileId: text("recipient_profile_id").notNull(),
@@ -104,6 +132,7 @@ export const messagesTable = pgTable("messages", {
 });
 
 export const documentsTable = pgTable("documents", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   patientId: text("patient_id").notNull(),
   uploadedByProfileId: text("uploaded_by_profile_id").notNull(),
@@ -115,6 +144,7 @@ export const documentsTable = pgTable("documents", {
 });
 
 export const paymentsTable = pgTable("payments", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   patientId: text("patient_id").notNull(),
   appointmentId: text("appointment_id"),
@@ -128,6 +158,7 @@ export const paymentsTable = pgTable("payments", {
 });
 
 export const auditLogsTable = pgTable("audit_logs", {
+  clinicId: text("clinic_id"),
   id: id("id"),
   actorProfileId: text("actor_profile_id"),
   action: text("action").notNull(),
@@ -137,6 +168,8 @@ export const auditLogsTable = pgTable("audit_logs", {
   createdAt,
 });
 
+export const insertClinicSchema = createInsertSchema(clinicsTable).omit({ createdAt: true, updatedAt: true });
+export const insertClinicMembershipSchema = createInsertSchema(clinicMembershipsTable).omit({ createdAt: true, updatedAt: true });
 export const insertProfileSchema = createInsertSchema(profilesTable).omit({ createdAt: true, updatedAt: true });
 export const insertPatientSchema = createInsertSchema(patientsTable).omit({ createdAt: true, updatedAt: true });
 export const insertClinicianSchema = createInsertSchema(cliniciansTable).omit({ createdAt: true, updatedAt: true });
@@ -149,6 +182,8 @@ export const insertDocumentSchema = createInsertSchema(documentsTable).omit({ cr
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ createdAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogsTable).omit({ createdAt: true });
 
+export type InsertClinic = z.infer<typeof insertClinicSchema>;
+export type InsertClinicMembership = z.infer<typeof insertClinicMembershipSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
 export type InsertClinician = z.infer<typeof insertClinicianSchema>;
