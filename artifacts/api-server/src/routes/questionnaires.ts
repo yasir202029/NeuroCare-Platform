@@ -15,11 +15,11 @@ router.post("/patients/:patientId/questionnaires", requirePermission("assessment
   return res.status(503).json({ error: "Questionnaire service is unavailable until tenant-scoped storage is connected.", code: "CLINICAL_STORAGE_UNAVAILABLE", requestId: randomUUID() });
 });
 
-router.post("/patients/:patientId/informant-links", requirePermission("assessment:write"), (req, res) => {
+router.post("/patients/:patientId/informant-links", requirePermission("patient:write"), (req, res) => {
   if (!isUuid(req.params.patientId)) return res.status(400).json({ error: "Invalid patient identifier." });
   const body = req.body as Record<string, unknown>;
   if (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email) || typeof body.relationship !== "string" || body.relationship.trim().length === 0 || body.relationship.length > 100) return res.status(400).json({ error: "A valid informant email and relationship are required." });
-  auditEvent(req, res, "informant_link.issue.request", "patient", req.params.patientId);
+  auditEvent(req, res, "informant_link.issue.request_by_patient", "patient", req.params.patientId);
   return res.status(503).json({ error: "Informant invitations are unavailable until signed-link delivery and tenant-scoped storage are configured.", code: "INFORMANT_LINKS_UNAVAILABLE", requestId: randomUUID() });
 });
 
