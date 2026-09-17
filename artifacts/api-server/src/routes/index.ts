@@ -5,6 +5,7 @@ import ehrRouter from "./ehr";
 import consentRouter from "./consent";
 import accessRouter from "./access";
 import recordsRouter from "./records";
+import questionnairesRouter from "./questionnaires";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(ehrRouter);
 router.use(consentRouter);
 router.use(accessRouter);
 router.use(recordsRouter);
+router.use(questionnairesRouter);
 
 export default router;
