@@ -4,7 +4,7 @@ import { requirePermission } from "../security/auth";
 const router: IRouter = Router();
 router.post("/admin/clinicians", requirePermission("user:manage"), (req, res) => {
   const body = req.body as Record<string, unknown>;
-  if (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email) || body.role !== "CLINICIAN") return res.status(400).json({ error: "A clinician email and CLINICIAN role are required." });
+  if (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email) || body.role !== "CLINICIAN" || typeof body.registrationNumber !== "string" || body.registrationNumber.trim().length === 0 || body.registrationNumber.length > 100) return res.status(400).json({ error: "A clinician email and CLINICIAN role are required." });
   auditEvent(req, res, "clinician.provision.request", "clinician");
   return res.status(503).json({ error: "Clinician provisioning is unavailable until the Supabase admin integration and tenant repository are configured.", code: "IDENTITY_PROVISIONING_UNAVAILABLE" });
 });
