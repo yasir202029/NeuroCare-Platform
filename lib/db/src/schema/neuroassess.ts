@@ -82,6 +82,32 @@ export const appointmentsTable = pgTable("appointments", {
   updatedAt,
 });
 
+export const clinicalNotesTable = pgTable("clinical_notes", {
+  clinicId: text("clinic_id").notNull(),
+  id: id("id"),
+  patientId: text("patient_id").notNull(),
+  authorProfileId: text("author_profile_id").notNull(),
+  noteType: text("note_type").notNull(),
+  body: text("body").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt,
+  updatedAt,
+});
+
+export const diagnosesTable = pgTable("diagnoses", {
+  clinicId: text("clinic_id").notNull(),
+  id: id("id"),
+  patientId: text("patient_id").notNull(),
+  clinicianId: text("clinician_id").notNull(),
+  codeSystem: text("code_system").notNull(),
+  code: text("code").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("active"),
+  diagnosedAt: timestamp("diagnosed_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt,
+  updatedAt,
+});
+
 export const assessmentsTable = pgTable("assessments", {
   clinicId: text("clinic_id"),
   id: id("id"),
@@ -174,6 +200,8 @@ export const insertProfileSchema = createInsertSchema(profilesTable).omit({ crea
 export const insertPatientSchema = createInsertSchema(patientsTable).omit({ createdAt: true, updatedAt: true });
 export const insertClinicianSchema = createInsertSchema(cliniciansTable).omit({ createdAt: true, updatedAt: true });
 export const insertAppointmentSchema = createInsertSchema(appointmentsTable).omit({ createdAt: true, updatedAt: true });
+export const insertClinicalNoteSchema = createInsertSchema(clinicalNotesTable).omit({ createdAt: true, updatedAt: true });
+export const insertDiagnosisSchema = createInsertSchema(diagnosesTable).omit({ createdAt: true, updatedAt: true });
 export const insertAssessmentSchema = createInsertSchema(assessmentsTable).omit({ createdAt: true, updatedAt: true });
 export const insertFormSchema = createInsertSchema(formsTable).omit({ createdAt: true, updatedAt: true });
 export const insertReportSchema = createInsertSchema(reportsTable).omit({ createdAt: true, updatedAt: true });
@@ -188,6 +216,8 @@ export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
 export type InsertClinician = z.infer<typeof insertClinicianSchema>;
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
+export type InsertClinicalNote = z.infer<typeof insertClinicalNoteSchema>;
+export type InsertDiagnosis = z.infer<typeof insertDiagnosisSchema>;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
 export type InsertForm = z.infer<typeof insertFormSchema>;
 export type InsertReport = z.infer<typeof insertReportSchema>;
