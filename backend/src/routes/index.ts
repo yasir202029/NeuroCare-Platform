@@ -15,6 +15,7 @@ import financeRoutes from '../modules/finance/finance.routes.js';
 import portalRoutes from '../modules/portals/portal.routes.js';
 import teamRoutes from '../modules/teams/team.routes.js';
 import engineRoutes from '../modules/engine/engine.routes.js';
+import clinicianRoutes from '../modules/clinician/clinician.routes.js';
 
 const router = Router();
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'neurocare-backend', timestamp: new Date().toISOString() }));
@@ -34,4 +35,5 @@ router.use('/finance', financeRoutes);
 router.use('/portals', portalRoutes);
 router.use('/teams', teamRoutes);
 router.use('/engine', engineRoutes);
+router.use('/clinician', clinicianRoutes);
 export default router;
