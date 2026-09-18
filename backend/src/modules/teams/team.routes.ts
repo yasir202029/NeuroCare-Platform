@@ -43,21 +43,56 @@ router.post('/patients/:patientId/workflow', requireRole(...clinicalRoles), asyn
   await audit(req.user!.id, 'PATIENT_WORKFLOW_TRANSITIONED', 'Patient', patientId, { fromStage: previous?.toStage, toStage: body.toStage });
   res.status(201).json(transition);
 }));
-router.post('/patients/:patientId/cover', requireRole(Role.ADMIN, ...clinicalRoles.slice(1)), asyncHandler(async (req, res) => {
-  const body = z.object({ patientAssignmentId: z.string().cuid(), coveringUserId: z.string().cuid(), startsAt: z.coerce.date(), endsAt: z.coerce.date().optional(), reason: z.string().min(1).max(500) }).parse(req.body);
-  const assignment = await prisma.patientAssignment.findUnique({ where: { id: body.patientAssignmentId }, include: { patient: true, user: true } });
-  if (!assignment || assignment.patientId !== String(req.params.patientId) || !assignment.active) throw notFound('Active patient assignment not found');
-  const cover = await prisma.coverArrangement.create({ data: { patientId: assignment.patientId, patientAssignmentId: assignment.id, originalUserId: assignment.userId, coveringUserId: body.coveringUserId, startsAt: body.startsAt, endsAt: body.endsAt, reason: body.reason, status: CoverStatus.ACTIVE } });
-  await prisma.notification.create({ data: { userId: body.coveringUserId, type: 'TASK_ASSIGNED', title: 'Temporary patient cover assigned', body: `You are covering ${assignment.patientId} until ${body.endsAt?.toISOString() ?? 'further notice'}.` } });
-  await prisma.auditEvent.create({ data: { actorId: req.user!.id, action: 'PATIENT_COVER_STARTED', resource: 'CoverArrangement', resourceId: cover.id, metadata: { patientId: assignment.patientId, originalUserId: assignment.userId, coveringUserId: body.coveringUserId } } });
-  res.status(201).json(cover);
+router.get('/patients/:patientId/handoffs', requireRole(...clinicalRoles), asyncHandler(async (req, res) => {
+  const patientId = String(req.params.patientId);
+  const isAdmin = req.user!.roles.includes(Role.ADMIN);
+  const handoffs = await prisma.coverArrangement.findMany({
+    where: {
+      patientId,
+      ...(isAdmin ? {} : { OR: [{ originalUserId: req.user!.id }, { coveringUserId: req.user!.id }] }),
+    },
+    include: {
+      originalUser: { select: { id: true, firstName: true, lastName: true } },
+      coveringUser: { select: { id: true, firstName: true, lastName: true } },
+      patientAssignment: { select: { teamId: true, role: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(handoffs);
 }));
-router.post('/cover/:id/return', requireRole(...clinicalRoles), asyncHandler(async (req, res) => {
-  const cover = await prisma.coverArrangement.findUnique({ where: { id: String(req.params.id) } });
-  if (!cover || cover.status === CoverStatus.RETURNED) throw notFound('Active cover arrangement not found');
-  const updated = await prisma.coverArrangement.update({ where: { id: cover.id }, data: { status: CoverStatus.RETURNED, returnedAt: new Date() } });
-  await prisma.notification.create({ data: { userId: cover.originalUserId, type: 'TASK_ASSIGNED', title: 'Patient returned from cover', body: 'Your patient assignment has returned to your workload.' } });
-  await audit(req.user!.id, 'PATIENT_COVER_RETURNED', 'CoverArrangement', cover.id, { patientId: cover.patientId });
+
+router.post(['/patients/:patientId/handoffs', '/patients/:patientId/cover'], requireRole(Role.ADMIN), asyncHandler(async (req, res) => {
+  const body = z.object({ patientAssignmentId: z.string().cuid(), coveringUserId: z.string().cuid(), startsAt: z.coerce.date(), endsAt: z.coerce.date().optional(), reason: z.string().trim().min(1).max(500) }).parse(req.body);
+  if (body.endsAt && body.endsAt <= body.startsAt) throw badRequest('Handoff end time must be after its start time');
+  const assignment = await prisma.patientAssignment.findUnique({ where: { id: body.patientAssignmentId } });
+  if (!assignment || assignment.patientId !== String(req.params.patientId) || !assignment.active) throw notFound('Active patient assignment not found');
+  if (assignment.userId === body.coveringUserId) throw badRequest('The covering clinician must differ from the assigned clinician');
+  const [coveringMember, activeHandoff] = await Promise.all([
+    prisma.teamMember.findFirst({ where: { teamId: assignment.teamId, userId: body.coveringUserId, active: true }, include: { user: { select: { status: true, roles: true } } } }),
+    prisma.coverArrangement.findFirst({ where: { patientAssignmentId: assignment.id, status: { in: [CoverStatus.PLANNED, CoverStatus.ACTIVE] } } }),
+  ]);
+  if (!coveringMember || coveringMember.user.status !== 'ACTIVE' || !coveringMember.user.roles.some((role) => clinicalRoles.includes(role))) throw badRequest('The covering user must be an active clinical member of the assigned team');
+  if (activeHandoff) throw badRequest('This assignment already has an active handoff');
+  const handoff = await prisma.$transaction(async (tx) => {
+    const created = await tx.coverArrangement.create({ data: { patientId: assignment.patientId, patientAssignmentId: assignment.id, originalUserId: assignment.userId, coveringUserId: body.coveringUserId, startsAt: body.startsAt, endsAt: body.endsAt, reason: body.reason, status: CoverStatus.ACTIVE, notificationSentAt: new Date() } });
+    await tx.notification.create({ data: { userId: body.coveringUserId, type: 'TASK_ASSIGNED', title: 'Patient handoff assigned', body: `You are covering patient ${assignment.patientId} until ${body.endsAt?.toISOString() ?? 'further notice'}.` } });
+    await tx.auditEvent.create({ data: { actorId: req.user!.id, action: 'PATIENT_HANDOFF_CREATED', resource: 'CoverArrangement', resourceId: created.id, metadata: { patientId: assignment.patientId, patientAssignmentId: assignment.id, originalUserId: assignment.userId, coveringUserId: body.coveringUserId, startsAt: body.startsAt.toISOString(), endsAt: body.endsAt?.toISOString() ?? null } } });
+    return created;
+  });
+  res.status(201).json(handoff);
+}));
+
+router.post(['/handoffs/:id/return', '/cover/:id/return'], requireRole(...clinicalRoles), asyncHandler(async (req, res, next) => {
+  const handoff = await prisma.coverArrangement.findUnique({ where: { id: String(req.params.id) } });
+  if (!handoff || handoff.status === CoverStatus.RETURNED) throw notFound('Active handoff not found');
+  const isAdmin = req.user!.roles.includes(Role.ADMIN);
+  if (!isAdmin && handoff.originalUserId !== req.user!.id && handoff.coveringUserId !== req.user!.id) return next(forbidden('You are not assigned to this handoff'));
+  const updated = await prisma.$transaction(async (tx) => {
+    const returned = await tx.coverArrangement.update({ where: { id: handoff.id }, data: { status: CoverStatus.RETURNED, returnedAt: new Date() } });
+    await tx.notification.create({ data: { userId: handoff.originalUserId, type: 'TASK_ASSIGNED', title: 'Patient handoff returned', body: 'This patient has returned to your workload.' } });
+    await tx.auditEvent.create({ data: { actorId: req.user!.id, action: 'PATIENT_HANDOFF_RETURNED', resource: 'CoverArrangement', resourceId: handoff.id, metadata: { patientId: handoff.patientId, originalUserId: handoff.originalUserId, coveringUserId: handoff.coveringUserId } } });
+    return returned;
+  });
   res.json(updated);
 }));
 export default router;
