@@ -1,0 +1,8 @@
+create table if not exists public.clinician_availability (id text primary key, clinic_id text not null references public.clinics(id) on delete restrict, clinician_id text not null references public.clinicians(id) on delete cascade, starts_at timestamptz not null, ends_at timestamptz not null, created_at timestamptz not null default now(), check (ends_at > starts_at));
+create index if not exists clinician_availability_schedule_idx on public.clinician_availability(clinician_id, starts_at);
+alter table public.clinician_availability enable row level security;
+create policy clinician_availability_clinic_isolation on public.clinician_availability for all using (public.has_clinic_membership(clinic_id)) with check (public.has_clinic_membership(clinic_id));
+create table if not exists public.clinician_earnings (id text primary key, clinic_id text not null references public.clinics(id) on delete restrict, clinician_id text not null references public.clinicians(id) on delete restrict, appointment_id text references public.appointments(id) on delete set null, amount numeric(10,2) not null, currency text not null default 'GBP', status text not null check (status in ('PENDING','APPROVED','PAID','VOID')), earned_at timestamptz not null default now(), created_at timestamptz not null default now());
+create index if not exists clinician_earnings_clinician_status_idx on public.clinician_earnings(clinician_id,status,earned_at desc);
+alter table public.clinician_earnings enable row level security;
+create policy clinician_earnings_clinic_isolation on public.clinician_earnings for all using (public.has_clinic_membership(clinic_id)) with check (public.has_clinic_membership(clinic_id));
