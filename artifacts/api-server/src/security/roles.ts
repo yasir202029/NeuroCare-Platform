@@ -16,7 +16,7 @@ export type Permission = (typeof permissions)[number];
 const grants: Record<PlatformRole, readonly Permission[]> = {
   SUPER_ADMIN: permissions,
   ADMIN: ["clinic:manage", "user:manage", "patient:read", "patient:write", "assessment:read", "assessment:write", "appointment:manage", "billing:read", "billing:write", "document:read", "document:write", "message:write", "audit:read"],
-  CLINICIAN: ["patient:read", "patient:write", "assessment:read", "assessment:write", "clinical:write", "appointment:manage", "document:read", "document:write", "message:write", "ai:use"],
+  CLINICIAN: ["patient:read", "patient:write", "assessment:read", "assessment:write", "clinical:write", "appointment:manage", "billing:read", "document:read", "document:write", "message:write", "ai:use"],
   PATIENT: ["patient:read", "patient:write", "appointment:manage", "document:read", "document:write", "message:write"],
   RECEPTIONIST: ["patient:read", "patient:write", "appointment:manage", "document:read", "message:write"],
   FINANCE: ["patient:read", "billing:read", "billing:write"],
