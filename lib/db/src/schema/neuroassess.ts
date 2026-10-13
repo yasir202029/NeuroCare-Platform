@@ -16,14 +16,33 @@ const id = (name: string) => text(name).primaryKey();
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date());
 
+export const organisationsTable = pgTable("organisations", {
+  id: id("id"), name: text("name").notNull(), slug: text("slug").notNull().unique(),
+  status: text("status").notNull().default("ACTIVE"), plan: text("plan").notNull().default("STARTER"), createdAt, updatedAt,
+});
+
 export const clinicsTable = pgTable("clinics", {
   id: id("id"),
+  organisationId: text("organisation_id"),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  domain: text("domain"),
+  fontFamily: text("font_family"),
+  welcomeText: text("welcome_text"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt,
   updatedAt,
 });
+
+export const departmentsTable = pgTable("departments", {
+  id: id("id"), organisationId: text("organisation_id").notNull(), clinicId: text("clinic_id").notNull(),
+  name: text("name").notNull(), slug: text("slug").notNull(), createdAt, updatedAt,
+}, (table) => [uniqueIndex("departments_clinic_slug_idx").on(table.clinicId, table.slug)]);
+
+export const organisationMembershipsTable = pgTable("organisation_memberships", {
+  id: id("id"), organisationId: text("organisation_id").notNull(), profileId: text("profile_id").notNull(),
+  role: text("role").notNull(), isActive: boolean("is_active").notNull().default(true), createdAt, updatedAt,
+}, (table) => [uniqueIndex("organisation_memberships_org_profile_idx").on(table.organisationId, table.profileId)]);
 
 export const profilesTable = pgTable("profiles", {
   id: id("id"),
@@ -194,6 +213,9 @@ export const auditLogsTable = pgTable("audit_logs", {
   createdAt,
 });
 
+export const insertOrganisationSchema = createInsertSchema(organisationsTable).omit({ createdAt: true, updatedAt: true });
+export const insertDepartmentSchema = createInsertSchema(departmentsTable).omit({ createdAt: true, updatedAt: true });
+export const insertOrganisationMembershipSchema = createInsertSchema(organisationMembershipsTable).omit({ createdAt: true, updatedAt: true });
 export const insertClinicSchema = createInsertSchema(clinicsTable).omit({ createdAt: true, updatedAt: true });
 export const insertClinicMembershipSchema = createInsertSchema(clinicMembershipsTable).omit({ createdAt: true, updatedAt: true });
 export const insertProfileSchema = createInsertSchema(profilesTable).omit({ createdAt: true, updatedAt: true });
@@ -210,6 +232,9 @@ export const insertDocumentSchema = createInsertSchema(documentsTable).omit({ cr
 export const insertPaymentSchema = createInsertSchema(paymentsTable).omit({ createdAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogsTable).omit({ createdAt: true });
 
+export type InsertOrganisation = z.infer<typeof insertOrganisationSchema>;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type InsertOrganisationMembership = z.infer<typeof insertOrganisationMembershipSchema>;
 export type InsertClinic = z.infer<typeof insertClinicSchema>;
 export type InsertClinicMembership = z.infer<typeof insertClinicMembershipSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
