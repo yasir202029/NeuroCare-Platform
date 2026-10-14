@@ -6,9 +6,7 @@ import consentRouter from "./consent";
 import accessRouter from "./access";
 import recordsRouter from "./records";
 import questionnairesRouter from "./questionnaires";
-import intakeRouter from "./intake";
-import clinicianOperationsRouter from "./clinician-operations";
-import careOperationsRouter from "./care-operations";
+import brandingRouter from "./branding";
 
 const router: IRouter = Router();
 
@@ -19,8 +17,6 @@ router.use(consentRouter);
 router.use(accessRouter);
 router.use(recordsRouter);
 router.use(questionnairesRouter);
-router.use(intakeRouter);
-router.use(clinicianOperationsRouter);
-router.use(careOperationsRouter);
+router.use(brandingRouter);
 
 export default router;
