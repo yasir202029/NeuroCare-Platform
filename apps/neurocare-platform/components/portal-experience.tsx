@@ -582,8 +582,13 @@ function ClinicianExperience() {
 
   async function updateAppointment(appointment: Appointment, status: string) {
     setBusy(true);
+    setError("");
     try {
-      await api(`/api/v1/booking/appointments/${appointment.id}/status`, {
+      const endpoint =
+        status === "CANCELLED" || status === "DID_NOT_ATTEND"
+          ? `/api/v1/patients/me/appointments/${appointment.id}/status`
+          : `/api/v1/booking/appointments/${appointment.id}/status`;
+      await api(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -596,14 +601,14 @@ function ClinicianExperience() {
       setNotice(
         status === "IN_PROGRESS"
           ? "Attendance started and recorded."
-          : `Appointment updated to ${status.replace(/_/g, " ").toLowerCase()}.`,
+          : status === "COMPLETED"
+            ? "Appointment marked as completed."
+            : `Appointment updated to ${status.replace(/_/g, " ").toLowerCase()}.`,
       );
       await reload();
     } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not update appointment.",
+      setError(
+        reason instanceof Error ? reason.message : "Could not update appointment.",
       );
     } finally {
       setBusy(false);

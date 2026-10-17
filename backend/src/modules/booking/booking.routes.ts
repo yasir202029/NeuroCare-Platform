@@ -277,4 +277,54 @@ router.post(
     );
   }),
 );
+
+router.patch(
+  "/patients/me/appointments/:id/status",
+  asyncHandler(async (req, res) => {
+    const body = z
+      .object({
+        status: z.nativeEnum(AppointmentStatus),
+        cancellationReason: z.string().max(500).optional(),
+      })
+      .parse(req.body);
+    const patient = await prisma.patient.findUnique({
+      where: { userId: req.user!.id },
+    });
+    if (!patient) throw notFound("Patient profile not found");
+    const current = await prisma.appointment.findUnique({
+      where: { id: String(req.params.id), patientId: patient.id },
+    });
+    if (!current) throw notFound("Appointment not found");
+    if (!["CANCELLED", "DID_NOT_ATTEND"].includes(body.status))
+      throw badRequest(
+        "Patients may only cancel or mark as did-not-attend their own appointments",
+      );
+    if (body.status === "DID_NOT_ATTEND" && !body.cancellationReason)
+      throw badRequest("Please provide a reason for missing this appointment");
+    const updated = await prisma.appointment.update({
+      where: { id: current.id },
+      data: {
+        status: body.status,
+        cancellationReason: body.cancellationReason,
+        lastUpdatedAt: new Date(),
+      },
+      include: {
+        clinician: {
+          select: {
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
+        },
+      },
+    });
+    await prisma.appointmentStatusEvent.create({
+      data: {
+        appointmentId: current.id,
+        status: body.status,
+        reason: body.cancellationReason,
+      },
+    });
+    res.json(updated);
+  }),
+);
+
 export default router;
