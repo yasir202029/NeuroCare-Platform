@@ -1,0 +1,225 @@
+apps
+├── admin-portal
+│   ├── app
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── styles.css
+│   ├── next.config.ts
+│   ├── node_modules
+│   │   ├── @types
+│   │   ├── next -> ../../../node_modules/.pnpm/next@16.1.6_@babel+core@7.29.7_supports-color@8.1.1__react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next
+│   │   ├── react -> ../../../node_modules/.pnpm/react@19.1.0/node_modules/react
+│   │   ├── react-dom -> ../../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom
+│   │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── package.json
+│   └── tsconfig.json
+├── clinician-portal
+│   ├── app
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── styles.css
+│   ├── next-env.d.ts
+│   ├── next.config.ts
+│   ├── node_modules
+│   │   ├── @types
+│   │   ├── next -> ../../../node_modules/.pnpm/next@16.1.6_@babel+core@7.29.7_supports-color@8.1.1__react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next
+│   │   ├── react -> ../../../node_modules/.pnpm/react@19.1.0/node_modules/react
+│   │   ├── react-dom -> ../../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom
+│   │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── package.json
+│   └── tsconfig.json
+├── marketing-site
+│   ├── app
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── styles.css
+│   ├── next-env.d.ts
+│   ├── next.config.ts
+│   ├── node_modules
+│   │   ├── @types
+│   │   ├── next -> ../../../node_modules/.pnpm/next@16.1.6_@babel+core@7.29.7_supports-color@8.1.1__react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next
+│   │   ├── react -> ../../../node_modules/.pnpm/react@19.1.0/node_modules/react
+│   │   ├── react-dom -> ../../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom
+│   │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── package.json
+│   └── tsconfig.json
+├── mobile
+│   ├── app
+│   │   ├── _layout.tsx
+│   │   └── index.tsx
+│   ├── app.json
+│   ├── node_modules
+│   │   ├── @neuroassess
+│   │   ├── @types
+│   │   ├── expo -> ../../../node_modules/.pnpm/expo@53.0.27_@babel+core@7.29.7_supports-color@8.1.1__@expo+metro-runtime@5.0.4_react-n_23ae95a027ca27886ce98fc18d35b50c/node_modules/expo
+│   │   ├── expo-router -> ../../../node_modules/.pnpm/expo-router@5.0.7_d622084ac78c0f914466ac12e37eb1e9/node_modules/expo-router
+│   │   ├── expo-status-bar -> ../../../node_modules/.pnpm/expo-status-bar@2.2.3_react-native@0.79.0_@babel+core@7.29.7_supports-color@8.1.1__@typ_812f8d52e293174fa54d032cd378fb82/node_modules/expo-status-bar
+│   │   ├── react -> ../../../node_modules/.pnpm/react@19.0.0/node_modules/react
+│   │   ├── react-native -> ../../../node_modules/.pnpm/react-native@0.79.0_@babel+core@7.29.7_supports-color@8.1.1__@types+react@19.3.0_react@19.0.0_supports-color@8.1.1/node_modules/react-native
+│   │   ├── react-native-safe-area-context -> ../../../node_modules/.pnpm/react-native-safe-area-context@5.4.0_react-native@0.79.0_@babel+core@7.29.7_supports-co_a11476dbaa1a5815a0d7ef1e6ed13c19/node_modules/react-native-safe-area-context
+│   │   ├── react-native-screens -> ../../../node_modules/.pnpm/react-native-screens@4.11.1_react-native@0.79.0_@babel+core@7.29.7_supports-color@8.1.1_90fae7bdeb57b498948fdf5c28e9e60c/node_modules/react-native-screens
+│   │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── package.json
+│   └── tsconfig.json
+├── neurocare-platform
+│   ├── app
+│   │   ├── [portal]
+│   │   ├── admin
+│   │   ├── engine
+│   │   ├── events
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── rules
+│   │   ├── states
+│   │   ├── styles.css
+│   │   ├── tasks
+│   │   └── workflows
+│   ├── components
+│   │   ├── engine-console.tsx
+│   │   └── platform-shell.tsx
+│   ├── next-env.d.ts
+│   ├── next.config.ts
+│   ├── node_modules
+│   │   ├── @types
+│   │   ├── next -> ../../../node_modules/.pnpm/next@16.1.6_@babel+core@7.29.7_supports-color@8.1.1__react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next
+│   │   ├── react -> ../../../node_modules/.pnpm/react@19.1.0/node_modules/react
+│   │   ├── react-dom -> ../../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom
+│   │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── package.json
+│   └── tsconfig.json
+├── patient-portal
+│   ├── app
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── styles.css
+│   ├── next-env.d.ts
+│   ├── next.config.ts
+│   ├── node_modules
+│   │   ├── @types
+│   │   ├── next -> ../../../node_modules/.pnpm/next@16.1.6_@babel+core@7.29.7_supports-color@8.1.1__react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next
+│   │   ├── react -> ../../../node_modules/.pnpm/react@19.1.0/node_modules/react
+│   │   ├── react-dom -> ../../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom
+│   │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── package.json
+│   └── tsconfig.json
+└── super-admin-portal
+    ├── app
+    │   ├── layout.tsx
+    │   ├── page.tsx
+    │   └── styles.css
+    ├── next.config.ts
+    ├── node_modules
+    │   ├── @types
+    │   ├── next -> ../../../node_modules/.pnpm/next@16.1.6_@babel+core@7.29.7_supports-color@8.1.1__react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/next
+    │   ├── react -> ../../../node_modules/.pnpm/react@19.1.0/node_modules/react
+    │   ├── react-dom -> ../../../node_modules/.pnpm/react-dom@19.1.0_react@19.1.0/node_modules/react-dom
+    │   └── typescript -> ../../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+    ├── package.json
+    └── tsconfig.json
+packages
+├── access
+│   ├── package.json
+│   └── src
+│       └── index.ts
+├── clinical-consent
+│   ├── package.json
+│   └── src
+│       └── index.ts
+├── config
+│   ├── package.json
+│   └── src
+│       └── index.ts
+└── portal-routing
+    ├── package.json
+    └── src
+        └── index.ts
+backend
+├── api
+│   └── index.ts
+├── docker-compose.yml
+├── docs
+│   ├── architecture.md
+│   ├── finance.md
+│   ├── report-generation.md
+│   └── video-consultations.md
+├── node_modules
+│   ├── @prisma
+│   │   └── client -> ../../../node_modules/.pnpm/@prisma+client@6.19.3_prisma@6.19.3_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client
+│   ├── @types
+│   │   ├── bcryptjs -> ../../../node_modules/.pnpm/@types+bcryptjs@2.4.6/node_modules/@types/bcryptjs
+│   │   ├── cors -> ../../../node_modules/.pnpm/@types+cors@2.8.19/node_modules/@types/cors
+│   │   ├── express -> ../../../node_modules/.pnpm/@types+express@5.0.6/node_modules/@types/express
+│   │   ├── jsonwebtoken -> ../../../node_modules/.pnpm/@types+jsonwebtoken@9.0.10/node_modules/@types/jsonwebtoken
+│   │   └── node -> ../../../node_modules/.pnpm/@types+node@24.13.5/node_modules/@types/node
+│   ├── bcryptjs -> ../../node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs
+│   ├── cors -> ../../node_modules/.pnpm/cors@2.8.6/node_modules/cors
+│   ├── dotenv -> ../../node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv
+│   ├── express -> ../../node_modules/.pnpm/express@5.2.1_supports-color@8.1.1/node_modules/express
+│   ├── helmet -> ../../node_modules/.pnpm/helmet@8.3.0/node_modules/helmet
+│   ├── jsonwebtoken -> ../../node_modules/.pnpm/jsonwebtoken@9.0.3/node_modules/jsonwebtoken
+│   ├── otplib -> ../../node_modules/.pnpm/otplib@12.0.1/node_modules/otplib
+│   ├── pino -> ../../node_modules/.pnpm/pino@9.14.0/node_modules/pino
+│   ├── prisma -> ../../node_modules/.pnpm/prisma@6.19.3_typescript@5.9.3/node_modules/prisma
+│   ├── stripe -> ../../node_modules/.pnpm/stripe@18.5.0_@types+node@24.13.5/node_modules/stripe
+│   ├── tsx -> ../../node_modules/.pnpm/tsx@4.23.13/node_modules/tsx
+│   ├── typescript -> ../../node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   ├── vitest -> ../../node_modules/.pnpm/vitest@3.2.7_@types+node@24.13.5_jiti@2.7.0_lightningcss@1.32.0_supports-color@8.1.1_te_57d8b327f7a9cb05eebe25476f13b7ca/node_modules/vitest
+│   └── zod -> ../../node_modules/.pnpm/zod@4.6.5/node_modules/zod
+├── package.json
+├── prisma
+│   ├── README.md
+│   ├── schema.prisma
+│   └── seed.ts
+├── README.md
+├── src
+│   ├── app.ts
+│   ├── infrastructure
+│   │   ├── logger.ts
+│   │   └── prisma.ts
+│   ├── middleware
+│   │   ├── audit.ts
+│   │   ├── auth.ts
+│   │   ├── errors.ts
+│   │   ├── request-context.ts
+│   │   └── validate.ts
+│   ├── modules
+│   │   ├── adhd
+│   │   ├── admin
+│   │   ├── ai
+│   │   ├── auth
+│   │   ├── autism
+│   │   ├── billing
+│   │   ├── booking
+│   │   ├── clinical-notes
+│   │   ├── clinician
+│   │   ├── engine
+│   │   ├── finance
+│   │   ├── messaging
+│   │   ├── patients
+│   │   ├── portals
+│   │   ├── reports
+│   │   ├── teams
+│   │   └── video
+│   ├── routes
+│   │   └── index.ts
+│   ├── server.ts
+│   ├── services
+│   │   ├── ai-session.service.ts
+│   │   ├── ai.service.ts
+│   │   ├── billing.service.ts
+│   │   ├── finance.service.ts
+│   │   ├── notifications.service.ts
+│   │   ├── report.service.ts
+│   │   ├── supabase.service.ts
+│   │   └── video-provider.service.ts
+│   └── shared
+│       ├── config.ts
+│       ├── db.ts
+│       ├── errors.ts
+│       ├── http.ts
+│       └── types.ts
+├── tests
+│   └── health.test.ts
+└── tsconfig.json
+
+132 directories, 91 files

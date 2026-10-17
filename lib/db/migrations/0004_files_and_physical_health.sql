@@ -1,0 +1,8 @@
+create table if not exists public.patient_files (id text primary key, clinic_id text not null references public.clinics(id) on delete restrict, patient_id text not null references public.patients(id) on delete restrict, uploaded_by_profile_id text not null references public.profiles(id), storage_path text not null, file_name text not null, media_type text not null, created_at timestamptz not null default now());
+create index if not exists patient_files_patient_created_idx on public.patient_files(patient_id, created_at desc);
+alter table public.patient_files enable row level security;
+create policy patient_files_clinic_isolation on public.patient_files for all using (public.has_clinic_membership(clinic_id)) with check (public.has_clinic_membership(clinic_id));
+create table if not exists public.physical_health_observations (id text primary key, clinic_id text not null references public.clinics(id) on delete restrict, patient_id text not null references public.patients(id) on delete restrict, recorded_by_profile_id text not null references public.profiles(id), observation_type text not null check (observation_type in ('BLOOD_PRESSURE','HEART_RATE','WEIGHT_KG','TEMPERATURE_C','OXYGEN_SATURATION','BLOOD_GLUCOSE')), value numeric not null, unit text not null, observed_at timestamptz not null default now(), created_at timestamptz not null default now());
+create index if not exists physical_health_patient_observed_idx on public.physical_health_observations(patient_id, observed_at desc);
+alter table public.physical_health_observations enable row level security;
+create policy physical_health_clinic_isolation on public.physical_health_observations for all using (public.has_clinic_membership(clinic_id)) with check (public.has_clinic_membership(clinic_id));
