@@ -535,6 +535,7 @@ export class AuthService {
   }
 
   private createTokenPair(user: TokenUser) {
+    const nonce = randomBytes(16).toString("hex");
     const claims = { sub: user.id, email: user.email, roles: user.roles };
     return {
       accessToken: jwt.sign(
@@ -547,7 +548,7 @@ export class AuthService {
         },
       ),
       refreshToken: jwt.sign(
-        { ...claims, type: "refresh" },
+        { ...claims, type: "refresh", jti: nonce },
         config.JWT_REFRESH_SECRET,
         {
           expiresIn: ttlSeconds(config.REFRESH_TOKEN_TTL),
