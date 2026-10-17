@@ -532,6 +532,149 @@ export default function AdminCommandCenter() {
             </ul>
           </article>
         </section>
+
+        <section
+          id="clinical-forms"
+          style={{
+            background: "#fff",
+            border: "1px solid #e2ebf5",
+            borderRadius: 20,
+            padding: 18,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 18,
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#607495",
+                  textTransform: "uppercase",
+                  letterSpacing: 2,
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                Clinical forms
+              </p>
+              <h2 style={{ margin: "10px 0 8px", fontSize: 28 }}>
+                Dynamic Assessment Templates
+              </h2>
+              <p style={{ margin: 0, color: "#405477", lineHeight: 1.6 }}>
+                Manage remote ADHD clinic assessment templates. Each template
+                drives a dynamic form across all portals with full audit trace.
+              </p>
+            </div>
+            <Link
+              href="/uk-adhd"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "10px 16px",
+                border: "none",
+                borderRadius: 10,
+                background: "#4e6ef2",
+                color: "#fff",
+                fontWeight: 700,
+                textDecoration: "none",
+                fontSize: 14,
+              }}
+            >
+              Open UK ADHD clinic →
+            </Link>
+          </div>
+
+          <div
+            style={{
+              overflowX: "auto",
+              border: "1px solid #e2ebf5",
+              borderRadius: 12,
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 13,
+                color: "#334155",
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    textAlign: "left",
+                    color: "#64748b",
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    fontSize: 11,
+                    letterSpacing: 1,
+                    borderBottom: "1px solid #e2ebf5",
+                  }}
+                >
+                  <th style={{ padding: "12px 16px" }}>Template</th>
+                  <th style={{ padding: "12px 16px" }}>Category</th>
+                  <th style={{ padding: "12px 16px" }}>Instrument</th>
+                  <th style={{ padding: "12px 16px" }}>Submissions</th>
+                  <th style={{ padding: "12px 16px" }}>Status</th>
+                  <th style={{ padding: "12px 16px" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  style={{
+                    borderBottom: "1px solid #f1f5f9",
+                  }}
+                >
+                  <td style={{ padding: "12px 16px", fontWeight: 700 }}>
+                    UK ADHD Intake Form
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>adhd</td>
+                  <td style={{ padding: "12px 16px" }}>ASRS</td>
+                  <td style={{ padding: "12px 16px" }}>0</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: "#dcfce7",
+                        color: "#166534",
+                        fontSize: 11,
+                        fontWeight: 800,
+                      }}
+                    >
+                      ● Active
+                    </span>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <button
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#4e6ef2",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        font: "inherit",
+                      }}
+                    >
+                      Edit template
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
   );

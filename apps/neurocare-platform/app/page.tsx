@@ -57,6 +57,13 @@ const branches = [
     description:
       "Follow a case from referral intake through assessment, medication and discharge.",
   },
+  {
+    href: "/uk-adhd",
+    label: "UK ADHD Clinic",
+    group: "REMOTE ASSESSMENT",
+    description:
+      "Complete remote ADHD assessments with dynamic clinical forms and audited pathways.",
+  },
 ];
 
 export default function Home() {
