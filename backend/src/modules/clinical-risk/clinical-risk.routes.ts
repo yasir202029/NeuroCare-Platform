@@ -58,7 +58,7 @@ router.get(
     if (riskBand) where.riskBand = String(riskBand);
     const scores = await prisma.clinicalRiskScore.findMany({
       where,
-      orderBy: { overallScore: 'desc', createdAt: 'desc' },
+      orderBy: [{ overallScore: 'desc' }, { createdAt: 'desc' }],
       include: {
         patient: { select: { id: true, user: { select: { firstName: true, lastName: true, email: true } } } },
         clinician: { select: { id: true, firstName: true, lastName: true } },
@@ -128,7 +128,7 @@ router.get(
     if (portal) where.portal = String(portal);
     const rankings = await prisma.patientRanking.findMany({
       where,
-      orderBy: { rankPosition: 'asc' },
+      orderBy: [{ rankPosition: 'asc' }],
       include: {
         patient: { select: { id: true, user: { select: { firstName: true, lastName: true, email: true } } } },
         reviewedBy: { select: { id: true, firstName: true, lastName: true } },
@@ -146,7 +146,7 @@ router.post(
     const { portal } = z.object({ portal: z.string().default('clinician') }).parse(req.query);
 
     const scores = await prisma.clinicalRiskScore.findMany({
-      orderBy: { overallScore: 'desc', createdAt: 'desc' },
+      orderBy: [{ overallScore: 'desc' }, { createdAt: 'desc' }],
       include: { patient: true },
     });
 
@@ -179,7 +179,7 @@ router.get(
     if (acknowledged !== undefined) where.acknowledged = acknowledged === 'true';
     const alerts = await prisma.medicationSafetyAlert.findMany({
       where,
-      orderBy: { severity: 'desc', createdAt: 'desc' },
+      orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
       include: {
         patient: { select: { id: true, user: { select: { firstName: true, lastName: true } } } },
         clinician: { select: { id: true, firstName: true, lastName: true } },

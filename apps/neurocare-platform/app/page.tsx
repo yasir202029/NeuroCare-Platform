@@ -71,6 +71,34 @@ const branches = [
     description:
       "NICE-aligned patient risk stratification and prioritised worklist for clinicians.",
   },
+  {
+    href: "/ai-insights",
+    label: "AI Clinical Insights",
+    group: "ADVANCED AI",
+    description:
+      "AI-generated clinical insights for symptom patterns, medication response, and risk prediction.",
+  },
+  {
+    href: "/medication-safety",
+    label: "Medication Safety",
+    group: "ADVANCED AI",
+    description:
+      "AI-powered medication safety validation, interaction checks, and safety alerts.",
+  },
+  {
+    href: "/letter-generator",
+    label: "AI Letter Generator",
+    group: "ADVANCED AI",
+    description:
+      "AI-assisted clinical correspondence: GP letters, shared care letters, and referral letters.",
+  },
+  {
+    href: "/saas-admin",
+    label: "SaaS Admin",
+    group: "PLATFORM OPERATIONS",
+    description:
+      "Manage subscription plans, organizations, feature flags, and API keys.",
+  },
 ];
 
 export default function Home() {

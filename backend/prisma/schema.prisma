@@ -614,6 +614,8 @@ model User {
   rankingsReviewed         PatientRanking[]         @relation("RankingReviewer")
   safetyAlertsAuthored     MedicationSafetyAlert[]  @relation("SafetyAlertAuthor")
   safetyAlertsAcknowledged MedicationSafetyAlert[]  @relation("SafetyAlertAcknowledger")
+  aiTemplates              AiTemplate[]             @relation("AiTemplateAuthor")
+  orgMemberships           OrganizationMember[]     @relation("OrganizationMember")
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
 }
@@ -792,6 +794,7 @@ model Patient {
   riskScores           ClinicalRiskScore[]
   rankings             PatientRanking[]
   safetyAlerts         MedicationSafetyAlert[]
+  aiInsights           AiInsight[] @relation("AiInsightPatient")
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
 }
@@ -1373,6 +1376,7 @@ model AiRun {
   completedAt        DateTime?
   aiSession          AiSession             @relation(fields: [aiSessionId], references: [id], onDelete: Cascade)
   generatedDocuments AiGeneratedDocument[]
+  insights           AiInsight[] @relation("AiInsightSourceRun")
   createdAt          DateTime              @default(now())
 
   @@index([aiSessionId, type, createdAt])
@@ -1898,4 +1902,200 @@ model MedicationSafetyAlert {
 
   @@index([patientId, acknowledged, createdAt])
   @@index([severity, createdAt])
+}
+
+enum AiInsightType {
+  SYMPTOM_PATTERN
+  MEDICATION_RESPONSE
+  RISK_PREDICTION
+  TITRATION_ADJUSTMENT
+  SAFETY_FLAG
+  CLINICAL_REMINDER
+}
+
+model AiInsight {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation("AiInsightPatient", fields: [patientId], references: [id])
+  type        AiInsightType
+  title       String
+  content     String
+  confidence  Int
+  severity    AuditSeverity @default(INFO)
+  sourceRunId String?
+  sourceRun   AiRun?   @relation("AiInsightSourceRun", fields: [sourceRunId], references: [id])
+  dismissed   Boolean  @default(false)
+  dismissedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([patientId, type, dismissed])
+  @@index([patientId, createdAt])
+}
+
+enum AiTemplateType {
+  GP_LETTER
+  SHARED_CARE_LETTER
+  ASSESSMENT_REPORT
+  TITRATION_PLAN
+  MEDICATION_REVIEW
+  REFERRAL_LETTER
+}
+
+model AiTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  type        AiTemplateType
+  content     String
+  variables   Json
+  active    Boolean  @default(true)
+  createdById String?
+  createdBy   User?    @relation("AiTemplateAuthor", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key, active])
+  @@index([type])
+}
+
+enum SubscriptionTier {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  tier        SubscriptionTier
+  description String?
+  pricePence  Int
+  interval    BillingInterval
+  features    Json
+  limits      Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  organizations Organization[] @relation("SubscriptionPlanOrganizations")
+  subscriptionInvoices SubscriptionInvoice[] @relation("SubscriptionPlanInvoices")
+
+  @@index([key, active])
+  @@index([tier])
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  tier        SubscriptionTier @default(STARTER)
+  planId      String?
+  plan        SubscriptionPlan? @relation("SubscriptionPlanOrganizations", fields: [planId], references: [id])
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  branding    Json
+  settings    Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     OrganizationMember[]
+  usageMeters UsageMeter[]
+  apiKeys     ApiKey[]
+  subscriptionInvoices SubscriptionInvoice[]
+  trialRecords TrialRecord[]
+
+  @@index([key, active])
+}
+
+model OrganizationMember {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  userId    String
+  user      User     @relation("OrganizationMember", fields: [userId], references: [id])
+  role      String   @default("MEMBER")
+  joinedAt  DateTime @default(now())
+
+  @@unique([orgId, userId])
+}
+
+model UsageMeter {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  metric    String
+  period    String
+  count     Int      @default(0)
+  limit     Int?
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, metric, period])
+  @@index([orgId, resetAt])
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  name        String
+  keyHash     String   @unique
+  prefix      String   @unique
+  scopes      Json
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, active])
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  enabled     Boolean  @default(false)
+  rolloutPct  Int      @default(0)
+  conditions  Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model SubscriptionInvoice {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  planId      String
+  plan        SubscriptionPlan @relation("SubscriptionPlanInvoices", fields: [planId], references: [id])
+  amountPence Int
+  status      String
+  stripeInvoiceId String? @unique
+  dueAt       DateTime
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, status])
+  @@index([dueAt])
+}
+
+model TrialRecord {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  tier        SubscriptionTier
+  startedAt   DateTime
+  endsAt      DateTime
+  converted   Boolean  @default(false)
+  convertedAt DateTime?
+
+  @@index([orgId])
 }

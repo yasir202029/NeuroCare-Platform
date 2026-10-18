@@ -1,10 +1,27 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { authenticatedFetch } from "../lib/client-api";
+import { ClinicalFormRenderer } from "./clinical-form-renderer";
 
-type PortalId =
-  "patient" | "clinician" | "titration" | "prescriber" | "finance" | "admin";
+type PatientProfile = {
+  id: string;
+  medicalHistory?: string | null;
+  accessibilityNeeds?: string | null;
+  user?: { firstName: string; lastName: string; email: string; phone?: string | null };
+  nhsNumberHash?: string | null;
+};
+type Appointment = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  mode: string;
+  status: string;
+  clinicianId?: string | null;
+  clinician?: { firstName: string; lastName: string } | null;
+  videoSession?: { id: string; joinUrl?: string | null; startedAt?: string | null } | null;
+};
 type Slot = {
   id: string;
   startsAt: string;
@@ -15,117 +32,176 @@ type Slot = {
 type Thread = {
   id: string;
   subject?: string | null;
-  messages: {
-    id: string;
-    body: string;
-    createdAt: string;
-    senderId?: string | null;
-  }[];
+  messages: { id: string; body: string; createdAt: string; senderId?: string | null }[];
 };
-type PatientProfile = {
+type Document = {
   id: string;
-  medicalHistory?: string | null;
-  accessibilityNeeds?: string | null;
-};
-type Appointment = {
-  id: string;
-  patientId: string;
-  startsAt: string;
-  endsAt: string;
-  mode: string;
-  status: string;
-  videoSession?: {
-    id: string;
-    provider: string;
-    waitingRoomOpenedAt?: string | null;
-    startedAt?: string | null;
-    endedAt?: string | null;
-  } | null;
-  patient?: { id: string; user?: { firstName: string; lastName: string } };
-};
-type WorkPatient = {
-  id: string;
-  user: { firstName: string; lastName: string };
-  assessments: {
-    id: string;
-    type: string;
-    adhd?: {
-      titrationPlans?: {
-        id: string;
-        status: string;
-        targetMedication?: string | null;
-      }[];
-    } | null;
-  }[];
-  prescriptions: {
-    id: string;
-    status: string;
-    items: {
-      medication: string;
-      dose?: string | null;
-      strength?: string | null;
-    }[];
-  }[];
-};
-type ClinicianWorkspace = { totalPatients: number; patients: WorkPatient[] };
-type FinanceData = {
-  revenue: Record<string, { amountPence: number; transactions: number }>;
-  patients: { new: number; active: number; waitingList: number };
-  activity: {
-    adhdAssessments: number;
-    followUps: number;
-    medicationReviews: number;
-  };
-  outstandingBalancePence: number;
-};
-type Invoice = {
-  id: string;
-  status: string;
-  totalPence: number;
+  type: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
   createdAt: string;
-  dueAt?: string | null;
+};
+type RiskScore = {
+  overallScore: number;
+  riskBand: string;
+  factors: Record<string, { score: number; label: string }>;
+  reviewedAt: string;
+};
+type Medication = {
+  id: string;
+  medication: string;
+  dose?: string | null;
+  status: string;
+  createdAt: string;
 };
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await authenticatedFetch(path, init);
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      result.error?.message ??
-        result.message ??
-        `Request failed (${response.status})`,
-    );
-  }
-  return result as T;
+const portalColor: Record<string, string> = {
+  patient: "#145742",
+  clinician: "#1d4ed8",
+  titration: "#7c3aed",
+  prescriber: "#be185d",
+  finance: "#b45309",
+  admin: "#0f172a",
+};
+
+function PortalHeader({ portal }: { portal: string }) {
+  const color = portalColor[portal] ?? "#0f172a";
+  return (
+    <header
+      style={{
+        background: color,
+        color: "#ffffff",
+        padding: "20px clamp(20px, 5vw, 64px) 20px",
+        borderBottom: "1px solid rgba(255,255,255,0.15)",
+      }}
+    >
+      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 8,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.2)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 900,
+              fontSize: 14,
+            }}
+          >
+            n
+          </div>
+          <span style={{ fontWeight: 900, fontSize: 20, letterSpacing: -0.02 }}>
+            NEUROCARE
+          </span>
+        </div>
+        <p style={{ margin: "4px 0 0", opacity: 0.85, fontSize: 13 }}>
+          {portal.charAt(0).toUpperCase() + portal.slice(1)} workspace
+        </p>
+      </div>
+    </header>
+  );
 }
 
-export function PortalExperience({ portal }: { portal: PortalId }) {
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+  gap: 18,
+  marginTop: 24,
+};
+const panelStyle = {
+  background: "#fff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 16,
+  padding: 24,
+  display: "grid",
+  alignContent: "start",
+  gap: 16,
+};
+const fieldStyle = {
+  padding: "10px 12px",
+  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  font: "inherit",
+  width: "100%",
+  boxSizing: "border-box" as const,
+} as React.CSSProperties;
+const labelStyle = {
+  display: "grid",
+  gap: 6,
+  fontWeight: 700,
+  fontSize: 13,
+  color: "#334155",
+};
+const primaryButton = {
+  background: "#4e6ef2",
+  color: "#fff",
+  border: "none",
+  borderRadius: 8,
+  padding: "10px 18px",
+  fontWeight: 800,
+  cursor: "pointer",
+  font: "inherit",
+};
+const secondaryButton = {
+  background: "#f1f5f9",
+  color: "#334155",
+  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  padding: "10px 18px",
+  fontWeight: 700,
+  cursor: "pointer",
+  font: "inherit",
+};
+const metricStyle = {
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: 12,
+  padding: 18,
+  display: "grid",
+  gap: 8,
+};
+const noticeStyle = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  fontSize: 13,
+  lineHeight: 1.5,
+  marginTop: 12,
+};
+
+export function PortalExperience({ portal }: { portal: string }) {
   if (portal === "patient") return <PatientExperience />;
   if (portal === "clinician") return <ClinicianExperience />;
   if (portal === "titration") return <TitrationExperience />;
   if (portal === "prescriber") return <PrescriberExperience />;
   if (portal === "finance") return <FinanceExperience />;
+  if (portal === "admin") return <AdminExperience />;
   return (
-    <Panel
-      title="Administration"
-      detail="Manage users, queues, permissions and audit activity from the operations command centre."
-    >
-      <a href="/admin">Open command centre →</a>
-    </Panel>
+    <div style={{ padding: 40, color: "#64748b" }}>
+      Portal "{portal}" not found.
+    </div>
   );
 }
 
 function PatientExperience() {
   const [profile, setProfile] = useState<PatientProfile | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [joinLinks, setJoinLinks] = useState<Record<string, string>>({});
   const [slots, setSlots] = useState<Slot[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [riskScore, setRiskScore] = useState<RiskScore | null>(null);
   const [slotId, setSlotId] = useState("");
   const [medicalHistory, setMedicalHistory] = useState("");
   const [accessibilityNeeds, setAccessibilityNeeds] = useState("");
-  const [concerns, setConcerns] = useState("");
-  const [impact, setImpact] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [threadId, setThreadId] = useState("");
@@ -138,23 +214,35 @@ function PatientExperience() {
     try {
       const from = new Date();
       const to = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000);
-      const [nextProfile, nextAppointments, nextThreads, nextSlots] =
+      const [nextProfile, nextAppointments, nextThreads, nextSlots, nextDocs, nextRisk] =
         await Promise.all([
-          api<PatientProfile>("/api/v1/patients/me"),
-          api<Appointment[]>("/api/v1/booking/appointments"),
-          api<Thread[]>("/api/v1/messages"),
-          api<Slot[]>(
+          authenticatedFetch("/api/v1/patients/me"),
+          authenticatedFetch("/api/v1/booking/appointments"),
+          authenticatedFetch("/api/v1/messages"),
+          authenticatedFetch(
             `/api/v1/booking/availability?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
           ),
+          authenticatedFetch("/api/v1/patients/documents"),
+          authenticatedFetch("/api/v1/patients/me/risk-score"),
         ]);
-      setProfile(nextProfile);
-      setMedicalHistory(nextProfile.medicalHistory ?? "");
-      setAccessibilityNeeds(nextProfile.accessibilityNeeds ?? "");
-      setAppointments(nextAppointments);
-      setThreads(nextThreads);
-      setThreadId((current) => current || nextThreads[0]?.id || "");
-      setSlots(nextSlots);
-      setSlotId((current) => current || nextSlots[0]?.id || "");
+      const [profileJson, appointmentsJson, threadsJson, slotsJson, docsJson, riskJson] =
+        await Promise.all([
+          nextProfile.json(),
+          nextAppointments.json(),
+          nextThreads.json(),
+          nextSlots.json(),
+          nextDocs.json(),
+          nextRisk.json(),
+        ]);
+      setProfile(profileJson as PatientProfile);
+      setAppointments(appointmentsJson as Appointment[]);
+      setThreads(threadsJson as Thread[]);
+      setSlots(slotsJson as Slot[]);
+      setDocuments(docsJson as Document[]);
+      const risk = riskJson as { score?: RiskScore | null };
+      setRiskScore(risk.score ?? null);
+      setThreadId((current) => current || (threadsJson as Thread[])[0]?.id || "");
+      setSlotId((current) => current || (slotsJson as Slot[])[0]?.id || "");
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -172,47 +260,17 @@ function PatientExperience() {
     event.preventDefault();
     setBusy(true);
     try {
-      await api("/api/v1/patients/me", {
+      const res = await authenticatedFetch("/api/v1/patients/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ medicalHistory, accessibilityNeeds }),
       });
+      if (!res.ok) throw new Error("Could not save profile");
       setNotice("Your care information was saved.");
+      await reload();
     } catch (reason) {
       setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not save your information.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function sendScreening(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await api("/api/v1/adhd/screening", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instrument: "INFORMANT_FORM",
-          formKey: "adhd-intake",
-          version: "1",
-          answers: { concerns, impact },
-        }),
-      });
-      setConcerns("");
-      setImpact("");
-      setNotice(
-        "Your ADHD intake information was submitted to the clinical team.",
-      );
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not submit intake information.",
+        reason instanceof Error ? reason.message : "Could not save your information.",
       );
     } finally {
       setBusy(false);
@@ -225,7 +283,7 @@ function PatientExperience() {
     if (!slot) return setNotice("Choose an available appointment time first.");
     setBusy(true);
     try {
-      await api("/api/v1/booking/appointments", {
+      const res = await authenticatedFetch("/api/v1/booking/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -237,48 +295,13 @@ function PatientExperience() {
           availabilityId: slot.id,
         }),
       });
-      setNotice(
-        "Appointment request sent. Your team will confirm it in this portal.",
-      );
+      if (!res.ok) throw new Error("Could not book appointment");
+      setNotice("Appointment booked successfully.");
+      setSlotId("");
       await reload();
     } catch (reason) {
       setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not request this appointment.",
-      );
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function joinRemoteAppointment(appointment: Appointment) {
-    if (!appointment.videoSession) return;
-    setBusy(true);
-    try {
-      const result = await api<{ joinUrl?: string; waitingRoom: boolean }>(
-        `/api/v1/video/sessions/${appointment.videoSession.id}/join`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ participantRole: "patient" }),
-        },
-      );
-      if (result.waitingRoom || !result.joinUrl) {
-        setNotice("Your clinician has not opened the waiting room yet.");
-      } else {
-        setJoinLinks((current) => ({
-          ...current,
-          [appointment.id]: result.joinUrl!,
-        }));
-        setNotice("Your secure consultation link is ready.");
-      }
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not join the remote consultation.",
+        reason instanceof Error ? reason.message : "Could not book appointment.",
       );
     } finally {
       setBusy(false);
@@ -287,239 +310,294 @@ function PatientExperience() {
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!profile) return;
+    if (!selectedPatientId && !threadId) return;
     setBusy(true);
     try {
-      await api("/api/v1/messages", {
+      const res = await authenticatedFetch("/api/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(threadId ? { threadId } : { patientId: profile.id, subject }),
-          channel: "IN_APP",
-          body: message,
-        }),
+        body: JSON.stringify({ threadId, subject, body: message }),
       });
-      setMessage("");
+      if (!res.ok) throw new Error("Could not send message");
       setSubject("");
+      setMessage("");
+      setThreadId("");
       setNotice("Message sent to your care team.");
-      const updated = await api<Thread[]>("/api/v1/messages");
-      setThreads(updated);
-      setThreadId(updated[0]?.id ?? "");
+      await reload();
     } catch (reason) {
       setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not send your message.",
+        reason instanceof Error ? reason.message : "Could not send message.",
       );
     } finally {
       setBusy(false);
     }
   }
 
+  const color = portalColor.patient;
+  const riskColor =
+    riskScore?.riskBand === "CRITICAL"
+      ? "#b91c1c"
+      : riskScore?.riskBand === "HIGH"
+        ? "#d97706"
+        : riskScore?.riskBand === "MODERATE"
+          ? "#ca8a04"
+          : "#16a34a";
+
   return (
-    <div style={gridStyle}>
-      <Panel
-        title="Your appointments"
-        detail="Request an ADHD assessment from current clinic availability."
-      >
-        <form onSubmit={requestAppointment} style={formStyle}>
-          <label>
-            Available session
-            <select
-              required
-              value={slotId}
-              onChange={(event) => setSlotId(event.target.value)}
-              style={fieldStyle}
-            >
-              <option value="">Select a time</option>
-              {slots.map((slot) => (
-                <option key={slot.id} value={slot.id}>
-                  {dateTime(slot.startsAt)} · {slot.mode.replace(/_/g, " ")}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button disabled={busy || !slotId} style={primaryButton}>
-            Request appointment
-          </button>
-        </form>
-        <RecordList
-          empty="No appointments scheduled yet."
-          items={appointments.map((item) => ({
-            title: dateTime(item.startsAt),
-            detail: `${item.status.replace(/_/g, " ")} · ${item.mode.replace(/_/g, " ")}${item.mode === "VIDEO" && !item.videoSession ? " · Room not ready" : ""}`,
-            actions: joinLinks[item.id] ? (
-              <a
-                href={joinLinks[item.id]}
-                target="_blank"
-                rel="noreferrer"
-                style={linkStyle}
-              >
-                Join consultation ↗
-              </a>
-            ) : item.videoSession &&
-              ["CONFIRMED", "IN_PROGRESS"].includes(item.status) ? (
-              <button
-                disabled={busy}
-                onClick={() => void joinRemoteAppointment(item)}
-                style={primaryButton}
-              >
-                Join video visit
-              </button>
-            ) : undefined,
-          }))}
-        />
-      </Panel>
-      <Panel
-        title="Submit ADHD intake"
-        detail="Share the concerns and day-to-day impact you want your clinician to understand."
-      >
-        <form onSubmit={sendScreening} style={formStyle}>
-          <label>
-            What would you like help with?
-            <textarea
-              required
-              value={concerns}
-              onChange={(event) => setConcerns(event.target.value)}
-              style={fieldStyle}
-              rows={3}
-            />
-          </label>
-          <label>
-            How does it affect daily life?
-            <textarea
-              required
-              value={impact}
-              onChange={(event) => setImpact(event.target.value)}
-              style={fieldStyle}
-              rows={3}
-            />
-          </label>
-          <button disabled={busy} style={primaryButton}>
-            Submit intake
-          </button>
-        </form>
-      </Panel>
-      <Panel
-        title="Your information"
-        detail="Keep medical history and access needs current for your care team."
-      >
-        <form onSubmit={saveProfile} style={formStyle}>
-          <label>
-            Medical history
-            <textarea
-              value={medicalHistory}
-              onChange={(event) => setMedicalHistory(event.target.value)}
-              style={fieldStyle}
-              rows={3}
-            />
-          </label>
-          <label>
-            Accessibility or communication needs
-            <textarea
-              value={accessibilityNeeds}
-              onChange={(event) => setAccessibilityNeeds(event.target.value)}
-              style={fieldStyle}
-              rows={2}
-            />
-          </label>
-          <button disabled={busy} style={secondaryButton}>
-            Save information
-          </button>
-        </form>
-      </Panel>
-      <Panel
-        title="Message your care team"
-        detail="Replies stay in your private in-app conversation."
-      >
-        {threads.length > 0 && (
-          <label>
-            Conversation
-            <select
-              value={threadId}
-              onChange={(event) => setThreadId(event.target.value)}
-              style={fieldStyle}
-            >
-              {threads.map((thread) => (
-                <option key={thread.id} value={thread.id}>
-                  {thread.subject || "Care team message"}
-                </option>
-              ))}
-            </select>
-          </label>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#f1f5f9",
+        color: "#0f172a",
+        fontFamily:
+          'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
+      <PortalHeader portal="patient" />
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+        {error && (
+          <div
+            style={{
+              ...noticeStyle,
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#991b1b",
+            }}
+          >
+            {error}
+          </div>
         )}
-        <ThreadMessages
-          thread={threads.find((thread) => thread.id === threadId)}
-        />
-        <form onSubmit={sendMessage} style={formStyle}>
-          {!threadId && (
-            <label>
-              Subject
-              <input
-                required
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                style={fieldStyle}
-              />
-            </label>
-          )}
-          <label>
-            Message
-            <textarea
-              required
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              style={fieldStyle}
-              rows={3}
-            />
-          </label>
-          <button disabled={busy || !profile} style={primaryButton}>
-            Send message
-          </button>
-        </form>
-      </Panel>
-      {(error || notice) && (
-        <Notice error={Boolean(error)}>{error || notice}</Notice>
-      )}
-    </div>
+        {notice && (
+          <div
+            style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}
+          >
+            {notice}
+          </div>
+        )}
+
+        {/* Risk score banner */}
+        {riskScore && (
+          <section
+            style={{
+              background: "#ffffff",
+              border: `1px solid ${riskColor}33`,
+              borderRadius: 14,
+              padding: 20,
+              marginBottom: 24,
+              borderLeft: `4px solid ${riskColor}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+            }}
+          >
+            <div>
+              <div style={{ color: riskColor, fontSize: 11, textTransform: "uppercase", fontWeight: 900, letterSpacing: 1 }}>
+                Clinical Risk Assessment
+              </div>
+              <div style={{ fontSize: 40, fontWeight: 900, color: "#0f172a" }}>
+                {riskScore.overallScore}
+              </div>
+              <div style={{ color: "#64748b", fontSize: 13, marginTop: 2 }}>
+                Risk band: {riskScore.riskBand} · Last reviewed{" "}
+                {new Date(riskScore.reviewedAt).toLocaleDateString("en-GB")}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: "#64748b", textAlign: "right" }}>
+              NICE-aligned ADHD stratification
+            </div>
+          </section>
+        )}
+
+        {/* Metrics */}
+        <section style={gridStyle}>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>
+              Upcoming appointments
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>
+              {appointments.filter((a) => a.status !== "COMPLETED").length}
+            </div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>
+              Messages
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>
+              {threads.length}
+            </div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>
+              Documents
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>
+              {documents.length}
+            </div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>
+              Care plan status
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: "#16a34a" }}>
+              Active
+            </div>
+          </div>
+        </section>
+
+        <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+          {/* Profile */}
+          <section style={panelStyle}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 10 }}>
+              Your profile
+            </div>
+            <form onSubmit={saveProfile} style={{ display: "grid", gap: 14 }}>
+              <label style={labelStyle}>
+                Medical history
+                <textarea
+                  required
+                  value={medicalHistory}
+                  onChange={(e) => setMedicalHistory(e.target.value)}
+                  rows={3}
+                  style={fieldStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Accessibility needs
+                <textarea
+                  required
+                  value={accessibilityNeeds}
+                  onChange={(e) => setAccessibilityNeeds(e.target.value)}
+                  rows={2}
+                  style={fieldStyle}
+                />
+              </label>
+              <button disabled={busy} style={primaryButton}>
+                {busy ? "Saving…" : "Save profile"}
+              </button>
+            </form>
+          </section>
+
+          {/* Book appointment */}
+          <section style={panelStyle}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 10 }}>
+              Book ADHD assessment
+            </div>
+            <form onSubmit={requestAppointment} style={{ display: "grid", gap: 14 }}>
+              <label style={labelStyle}>
+                Available slot
+                <select
+                  required
+                  value={slotId}
+                  onChange={(e) => setSlotId(e.target.value)}
+                  style={fieldStyle}
+                >
+                  <option value="">Select a time</option>
+                  {slots.map((slot) => (
+                    <option key={slot.id} value={slot.id}>
+                      {new Date(slot.startsAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} ({slot.mode})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button disabled={busy || !slotId} style={primaryButton}>
+                {busy ? "Booking…" : "Book appointment"}
+              </button>
+            </form>
+          </section>
+        </section>
+
+        <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+          {/* Messages */}
+          <section style={panelStyle}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 10 }}>
+              Messages with care team
+            </div>
+            <div style={{ maxHeight: 300, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, background: "#f8fafc", marginBottom: 12 }}>
+              {threads.length === 0 ? (
+                <p style={{ color: "#64748b", fontSize: 13, textAlign: "center", padding: 20 }}>No messages yet.</p>
+              ) : (
+                threads.map((thread) => (
+                  <div key={thread.id} style={{ padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
+                    <div style={{ fontWeight: 800, fontSize: 13, color: "#0f172a" }}>
+                      {thread.subject || "Care team message"}
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+                      {thread.messages.slice(-1)[0]?.body ?? ""}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form onSubmit={sendMessage} style={{ display: "grid", gap: 10 }}>
+              <label style={labelStyle}>
+                Subject
+                <input required value={subject} onChange={(e) => setSubject(e.target.value)} style={fieldStyle} />
+              </label>
+              <label style={labelStyle}>
+                Message
+                <textarea required value={message} onChange={(e) => setMessage(e.target.value)} rows={2} style={fieldStyle} />
+              </label>
+              <button disabled={busy} style={primaryButton}>Send message</button>
+            </form>
+          </section>
+
+          {/* Documents */}
+          <section style={panelStyle}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 10 }}>
+              Your documents
+            </div>
+            <div style={{ maxHeight: 300, overflowY: "auto" }}>
+              {documents.length === 0 ? (
+                <p style={{ color: "#64748b", fontSize: 13, textAlign: "center", padding: 20 }}>No documents uploaded.</p>
+              ) : (
+                <ul style={{ padding: 0, margin: 0, listStyle: "none" }}>
+                  {documents.map((doc) => (
+                    <li key={doc.id} style={{ padding: "10px 0", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{doc.name}</div>
+                        <div style={{ color: "#64748b", fontSize: 11 }}>{doc.type} · {doc.mimeType}</div>
+                      </div>
+                      <div style={{ color: "#64748b", fontSize: 11 }}>{new Date(doc.createdAt).toLocaleDateString("en-GB")}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        </section>
+
+        {notice && (
+          <div style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}>
+            {notice}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
 
+const selectedPatientId = "";
+
 function ClinicianExperience() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [joinLinks, setJoinLinks] = useState<Record<string, string>>({});
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [patients, setPatients] = useState<WorkPatient[]>([]);
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [threadId, setThreadId] = useState("");
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
-  const [mode, setMode] = useState("VIDEO");
-  const [notice, setNotice] = useState("");
+  const [workspace, setWorkspace] = useState<any>(null);
+  const [riskRankings, setRiskRankings] = useState<any[]>([]);
+  const [safetyAlerts, setSafetyAlerts] = useState<any[]>([]);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function reload() {
     setError("");
     try {
-      const from = new Date();
-      const to = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      const [nextAppointments, nextSlots, workspace] = await Promise.all([
-        api<Appointment[]>("/api/v1/booking/appointments"),
-        api<Slot[]>(
-          `/api/v1/booking/availability?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
-        ),
-        api<ClinicianWorkspace>("/api/v1/clinician/workspace"),
+      const [wsRes, rankingsRes, alertsRes] = await Promise.all([
+        authenticatedFetch("/api/v1/clinician/workspace"),
+        authenticatedFetch("/api/v1/clinical-risk/rankings?portal=clinician"),
+        authenticatedFetch("/api/v1/clinical-risk/safety-alerts?acknowledged=false"),
       ]);
-      setAppointments(nextAppointments);
-      setSlots(nextSlots);
-      setPatients(workspace.patients);
-      setSelectedPatientId(
-        (current) => current || workspace.patients[0]?.id || "",
-      );
+      setWorkspace(await wsRes.json());
+      setRiskRankings(await rankingsRes.json());
+      setSafetyAlerts(await alertsRes.json());
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -532,946 +610,540 @@ function ClinicianExperience() {
   useEffect(() => {
     void reload();
   }, []);
-  useEffect(() => {
-    if (!selectedPatientId) return setThreads([]);
-    void api<Thread[]>(
-      `/api/v1/messages?patientId=${encodeURIComponent(selectedPatientId)}`,
-    )
-      .then((result) => {
-        setThreads(result);
-        setThreadId((current) =>
-          result.some((item) => item.id === current)
-            ? current
-            : (result[0]?.id ?? ""),
-        );
-      })
-      .catch((reason: unknown) =>
-        setNotice(
-          reason instanceof Error ? reason.message : "Could not load messages.",
-        ),
-      );
-  }, [selectedPatientId]);
 
-  async function createAvailability(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await api("/api/v1/booking/availability", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startsAt: new Date(startsAt).toISOString(),
-          endsAt: new Date(endsAt).toISOString(),
-          mode,
-        }),
-      });
-      setNotice("Session availability published for patient booking.");
-      setStartsAt("");
-      setEndsAt("");
-      await reload();
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not publish availability.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function updateAppointment(appointment: Appointment, status: string) {
-    setBusy(true);
-    setError("");
-    try {
-      const endpoint =
-        status === "CANCELLED" || status === "DID_NOT_ATTEND"
-          ? `/api/v1/patients/me/appointments/${appointment.id}/status`
-          : `/api/v1/booking/appointments/${appointment.id}/status`;
-      await api(endpoint, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status,
-          ...(status === "DID_NOT_ATTEND"
-            ? { cancellationReason: "Patient did not attend" }
-            : {}),
-        }),
-      });
-      setNotice(
-        status === "IN_PROGRESS"
-          ? "Attendance started and recorded."
-          : status === "COMPLETED"
-            ? "Appointment marked as completed."
-            : `Appointment updated to ${status.replace(/_/g, " ").toLowerCase()}.`,
-      );
-      await reload();
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Could not update appointment.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function createVideoRoom(appointment: Appointment) {
-    setBusy(true);
-    try {
-      await api("/api/v1/video/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appointmentId: appointment.id,
-          provider: "ZOOM",
-        }),
-      });
-      setNotice("Secure Zoom room created for this appointment.");
-      await reload();
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not create the video room.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openWaitingRoom(appointment: Appointment) {
-    const sessionId = appointment.videoSession?.id;
-    if (!sessionId) return;
-    setBusy(true);
-    try {
-      await api(`/api/v1/video/sessions/${sessionId}/waiting-room/open`, {
-        method: "POST",
-      });
-      setNotice("Patient waiting room is open.");
-      await reload();
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not open the waiting room.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function joinAsClinician(appointment: Appointment) {
-    const sessionId = appointment.videoSession?.id;
-    if (!sessionId) return;
-    setBusy(true);
-    try {
-      const result = await api<{ joinUrl: string }>(
-        `/api/v1/video/sessions/${sessionId}/join`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ participantRole: "clinician" }),
-        },
-      );
-      setJoinLinks((current) => ({
-        ...current,
-        [appointment.id]: result.joinUrl,
-      }));
-      setNotice("Host link is ready. Attendance has been recorded.");
-      await reload();
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not join the video session.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedPatientId) return;
-    setBusy(true);
-    try {
-      await api("/api/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(threadId
-            ? { threadId }
-            : { patientId: selectedPatientId, subject }),
-          channel: "IN_APP",
-          body: message,
-        }),
-      });
-      setMessage("");
-      setSubject("");
-      const updated = await api<Thread[]>(
-        `/api/v1/messages?patientId=${encodeURIComponent(selectedPatientId)}`,
-      );
-      setThreads(updated);
-      setThreadId(updated[0]?.id ?? "");
-      setNotice("Message sent to the patient.");
-    } catch (reason) {
-      setNotice(
-        reason instanceof Error ? reason.message : "Could not send message.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
+  const color = portalColor.clinician;
+  const patients = workspace?.patients ?? [];
+  const highRisk = patients.filter((p: any) => p.assessments?.some((a: any) => a.adhd?.titrationPlans?.some((t: any) => t.status === "ACTIVE")));
 
   return (
-    <div style={gridStyle}>
-      <Panel
-        title="Session scheduler"
-        detail="Publish bookable clinical sessions for patient appointments."
-      >
-        <form onSubmit={createAvailability} style={formStyle}>
-          <label>
-            Starts
-            <input
-              required
-              type="datetime-local"
-              value={startsAt}
-              onChange={(event) => setStartsAt(event.target.value)}
-              style={fieldStyle}
-            />
-          </label>
-          <label>
-            Ends
-            <input
-              required
-              type="datetime-local"
-              value={endsAt}
-              onChange={(event) => setEndsAt(event.target.value)}
-              style={fieldStyle}
-            />
-          </label>
-          <label>
-            Mode
-            <select
-              value={mode}
-              onChange={(event) => setMode(event.target.value)}
-              style={fieldStyle}
-            >
-              <option value="VIDEO">Video</option>
-              <option value="PHONE">Phone</option>
-              <option value="IN_PERSON">In person</option>
-            </select>
-          </label>
-          <button disabled={busy || !startsAt || !endsAt} style={primaryButton}>
-            Publish availability
-          </button>
-        </form>
-        <RecordList
-          empty="No published availability in the next 30 days."
-          items={slots.map((slot) => ({
-            title: dateTime(slot.startsAt),
-            detail: `${slot.mode.replace(/_/g, " ")} · Open for booking`,
-          }))}
-        />
-      </Panel>
-      <Panel
-        title="Appointments and attendance"
-        detail="Confirm requests, start sessions and record attendance outcomes."
-      >
-        <RecordList
-          empty="No appointments assigned to this clinician."
-          items={appointments.map((appointment) => ({
-            title: `${appointment.patient?.user?.firstName ?? "Patient"} ${appointment.patient?.user?.lastName ?? ""}`,
-            detail: `${dateTime(appointment.startsAt)} · ${appointment.status.replace(/_/g, " ")}`,
-            actions: (
-              <div style={actionStyle}>
-                {appointment.status === "REQUESTED" && (
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      void updateAppointment(appointment, "CONFIRMED")
-                    }
-                    style={secondaryButton}
-                  >
-                    Confirm
-                  </button>
-                )}
-                {appointment.status === "CONFIRMED" && (
-                  <>
-                    {appointment.mode === "VIDEO" &&
-                      !appointment.videoSession && (
-                        <button
-                          disabled={busy}
-                          onClick={() => void createVideoRoom(appointment)}
-                          style={primaryButton}
-                        >
-                          Create Zoom room
-                        </button>
-                      )}
-                    {appointment.mode === "VIDEO" &&
-                      appointment.videoSession &&
-                      !appointment.videoSession.waitingRoomOpenedAt && (
-                        <button
-                          disabled={busy}
-                          onClick={() => void openWaitingRoom(appointment)}
-                          style={primaryButton}
-                        >
-                          Open patient waiting room
-                        </button>
-                      )}
-                    {appointment.mode === "VIDEO" &&
-                      appointment.videoSession && (
-                        <button
-                          disabled={busy}
-                          onClick={() => void joinAsClinician(appointment)}
-                          style={secondaryButton}
-                        >
-                          Get host link
-                        </button>
-                      )}
-                    {appointment.mode !== "VIDEO" && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          void updateAppointment(appointment, "IN_PROGRESS")
-                        }
-                        style={primaryButton}
-                      >
-                        Start / attended
-                      </button>
-                    )}
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void updateAppointment(appointment, "DID_NOT_ATTEND")
-                      }
-                      style={secondaryButton}
-                    >
-                      Did not attend
-                    </button>
-                  </>
-                )}
-                {appointment.status === "IN_PROGRESS" && (
-                  <>
-                    {appointment.mode === "VIDEO" &&
-                      appointment.videoSession && (
-                        <button
-                          disabled={busy}
-                          onClick={() => void joinAsClinician(appointment)}
-                          style={secondaryButton}
-                        >
-                          Reopen host link
-                        </button>
-                      )}
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void updateAppointment(appointment, "COMPLETED")
-                      }
-                      style={primaryButton}
-                    >
-                      Complete session
-                    </button>
-                  </>
-                )}
-                {joinLinks[appointment.id] && (
-                  <a
-                    href={joinLinks[appointment.id]}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={linkStyle}
-                  >
-                    Join Zoom host ↗
-                  </a>
-                )}
-              </div>
-            ),
-          }))}
-        />
-      </Panel>
-      <Panel
-        title="Patient messages"
-        detail="Read assigned-patient conversations and reply from the clinical workspace."
-      >
-        <label>
-          Patient
-          <select
-            value={selectedPatientId}
-            onChange={(event) => setSelectedPatientId(event.target.value)}
-            style={fieldStyle}
-          >
-            <option value="">Select assigned patient</option>
-            {patients.map((patient) => (
-              <option key={patient.id} value={patient.id}>
-                {patient.user.firstName} {patient.user.lastName}
-              </option>
-            ))}
-          </select>
-        </label>
-        {threads.length > 0 && (
-          <label>
-            Conversation
-            <select
-              value={threadId}
-              onChange={(event) => setThreadId(event.target.value)}
-              style={fieldStyle}
-            >
-              {threads.map((thread) => (
-                <option key={thread.id} value={thread.id}>
-                  {thread.subject || "Care team message"}
-                </option>
+    <main style={{ minHeight: "100vh", background: "#f1f5f9", color: "#0f172a", fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <PortalHeader portal="clinician" />
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+        {error && <div style={{ ...noticeStyle, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b" }}>{error}</div>}
+        {notice && <div style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}>{notice}</div>}
+
+        <section style={gridStyle}>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Total patients</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{workspace?.totalPatients ?? 0}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Risk-ranked</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: "#b91c1c" }}>{riskRankings.length}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Safety alerts</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: "#d97706" }}>{safetyAlerts.length}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Today's sessions</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{patients.filter((p: any) => p.appointments?.length).length}</div>
+          </div>
+        </section>
+
+        {/* Safety alerts */}
+        <section style={{ ...panelStyle, marginBottom: 24 }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            ⚠ Clinical safety alerts
+          </div>
+          {safetyAlerts.length === 0 ? (
+            <p style={{ color: "#64748b", fontSize: 13 }}>No active safety alerts.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {safetyAlerts.map((alert: any) => (
+                <div key={alert.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", border: "1px solid #fef2f2", borderRadius: 10, background: "#fef2f2", borderLeft: `4px solid ${alert.severity === "CRITICAL" ? "#b91c1c" : "#d97706"}` }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#b91c1c" }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, color: "#1e293b" }}>{alert.patient?.user?.firstName} {alert.patient?.user?.lastName}</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{alert.message}</div>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: alert.severity === "CRITICAL" ? "#b91c1c" : "#d97706" }}>
+                    {alert.alertType}
+                  </span>
+                </div>
               ))}
-            </select>
-          </label>
-        )}
-        <ThreadMessages
-          thread={threads.find((thread) => thread.id === threadId)}
-        />
-        <form onSubmit={sendMessage} style={formStyle}>
-          {!threadId && (
-            <label>
-              Subject
-              <input
-                required
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                style={fieldStyle}
-              />
-            </label>
+            </div>
           )}
-          <label>
-            Reply
-            <textarea
-              required
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              style={fieldStyle}
-              rows={3}
-            />
-          </label>
-          <button disabled={busy || !selectedPatientId} style={primaryButton}>
-            Send reply
-          </button>
-        </form>
-      </Panel>
-      {(error || notice) && (
-        <Notice error={Boolean(error)}>{error || notice}</Notice>
-      )}
-    </div>
+        </section>
+
+        {/* Risk-ranked worklist */}
+        <section style={panelStyle}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            Prioritised patient worklist (NICE-aligned risk ranking)
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ textAlign: "left", color: "#64748b", fontWeight: 800, textTransform: "uppercase", fontSize: 11, borderBottom: "2px solid #e2e8f0" }}>
+                  <th style={{ padding: "12px 16px" }}>Rank</th>
+                  <th style={{ padding: "12px 16px" }}>Patient</th>
+                  <th style={{ padding: "12px 16px" }}>Risk score</th>
+                  <th style={{ padding: "12px 16px" }}>Band</th>
+                  <th style={{ padding: "12px 16px" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {riskRankings.length === 0 ? (
+                  <tr><td colSpan={5} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>No ranked patients yet. Run risk assessment from the UK ADHD clinic.</td></tr>
+                ) : (
+                  riskRankings.map((rank: any) => (
+                    <tr key={rank.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "12px 16px", fontWeight: 900, color: color }}>#{rank.rankPosition}</td>
+                      <td style={{ padding: "12px 16px", fontWeight: 700 }}>{rank.patient?.user?.firstName} {rank.patient?.user?.lastName}</td>
+                      <td style={{ padding: "12px 16px", fontWeight: 800, color: "#d97706" }}>{rank.score}</td>
+                      <td style={{ padding: "12px 16px" }}><span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "#b91c1c" }}>HIGH</span></td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <Link href={`/patient/${rank.patientId}`} style={{ color: "#4e6ef2", fontWeight: 700, textDecoration: "none", fontSize: 12 }}>Open record →</Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Patient cards */}
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
+          {patients.slice(0, 6).map((patient: any) => (
+            <div key={patient.id} style={panelStyle}>
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b" }}>
+                Patient record
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", marginBottom: 6 }}>
+                {patient.user?.firstName} {patient.user?.lastName}
+              </div>
+              <div style={{ color: "#64748b", fontSize: 12, marginBottom: 12 }}>{patient.appointments?.[0]?.startsAt ? new Date(patient.appointments[0].startsAt).toLocaleDateString("en-GB") : "No upcoming appointment"}</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <button style={{ ...primaryButton, fontSize: 12, padding: "6px 12px", flex: 1 }}>View record</button>
+                <button style={{ ...secondaryButton, fontSize: 12, padding: "6px 12px", flex: 1 }}>Messages</button>
+              </div>
+            </div>
+          ))}
+        </section>
+      </div>
+    </main>
   );
 }
 
 function TitrationExperience() {
-  const [workspace, setWorkspace] = useState<ClinicianWorkspace | null>(null);
+  const [workspace, setWorkspace] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
   const [assessmentId, setAssessmentId] = useState("");
   const [medication, setMedication] = useState("");
   const [dose, setDose] = useState("");
   const [response, setResponse] = useState("");
   const [sideEffects, setSideEffects] = useState("");
-  const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+
   async function reload() {
+    setError("");
     try {
-      setWorkspace(
-        await api<ClinicianWorkspace>("/api/v1/clinician/workspace"),
-      );
-      setError("");
+      const wsRes = await authenticatedFetch("/api/v1/clinician/workspace");
+      setWorkspace(await wsRes.json());
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not load assigned titration cases.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not load titration cases.");
     }
   }
-  useEffect(() => {
-    void reload();
-  }, []);
+
+  useEffect(() => { void reload(); }, []);
+
+  const color = portalColor.titration;
   const cases =
-    workspace?.patients.flatMap((patient) =>
+    workspace?.patients.flatMap((patient: any) =>
       patient.assessments
-        .filter((assessment) => assessment.type === "ADHD")
-        .map((assessment) => ({ patient, assessment })),
+        .filter((a: any) => a.type === "ADHD")
+        .map((assessment: any) => ({ patient, assessment })),
     ) ?? [];
+
   async function saveReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     try {
-      await api(`/api/v1/adhd/assessments/${assessmentId}/medication-reviews`, {
+      const res = await authenticatedFetch(`/api/v1/adhd/assessments/${assessmentId}/medication-reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ medication, dose, response, sideEffects }),
       });
-      setMedication("");
-      setDose("");
-      setResponse("");
-      setSideEffects("");
-      setNotice("Medication review added to the ADHD record.");
+      if (!res.ok) throw new Error("Could not save review");
+      setMedication(""); setDose(""); setResponse(""); setSideEffects("");
+      setNotice("Medication review recorded.");
       await reload();
     } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not save medication review.",
-      );
-    } finally {
-      setBusy(false);
-    }
+      setNotice(reason instanceof Error ? reason.message : "Could not save medication review.");
+    } finally { setBusy(false); }
   }
+
   return (
-    <div style={gridStyle}>
-      <Panel
-        title="Active titration cases"
-        detail="Review assigned ADHD pathways, medication progress and tolerability."
-      >
-        <RecordList
-          empty="No assigned ADHD assessments are available."
-          items={cases.map(({ patient, assessment }) => ({
-            title: `${patient.user.firstName} ${patient.user.lastName}`,
-            detail:
-              assessment.adhd?.titrationPlans
-                ?.map(
-                  (plan) =>
-                    `${plan.status.replace(/_/g, " ")}${plan.targetMedication ? `: ${plan.targetMedication}` : ""}`,
-                )
-                .join(" · ") || "No medication plan yet",
-          }))}
-        />
-      </Panel>
-      <Panel
-        title="Record medication review"
-        detail="Document response and side effects for an assigned ADHD assessment."
-      >
-        <form onSubmit={saveReview} style={formStyle}>
-          <label>
-            Assigned assessment
-            <select
-              required
-              value={assessmentId}
-              onChange={(event) => setAssessmentId(event.target.value)}
-              style={fieldStyle}
-            >
-              <option value="">Select assessment</option>
-              {cases.map(({ patient, assessment }) => (
-                <option key={assessment.id} value={assessment.id}>
-                  {patient.user.firstName} {patient.user.lastName}
-                </option>
+    <main style={{ minHeight: "100vh", background: "#f1f5f9", color: "#0f172a", fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <PortalHeader portal="titration" />
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+        {error && <div style={{ ...noticeStyle, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b" }}>{error}</div>}
+        {notice && <div style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}>{notice}</div>}
+
+        <section style={panelStyle}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            Active titration cases
+          </div>
+          {cases.length === 0 ? (
+            <p style={{ color: "#64748b", fontSize: 13 }}>No active titration cases.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 12 }}>
+              {cases.map(({ patient, assessment }: any) => (
+                <div key={assessment.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 16, background: "#fff" }}>
+                  <div style={{ fontWeight: 800, color: "#0f172a" }}>{patient.user.firstName} {patient.user.lastName}</div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginBottom: 8 }}>
+                    {assessment.adhd?.titrationPlans?.map((p: any) => `${p.status} · ${p.targetMedication ?? "medication"}`).join(" · ") || "No plan"}
+                  </div>
+                </div>
               ))}
-            </select>
-          </label>
-          <label>
-            Medication
-            <input
-              required
-              value={medication}
-              onChange={(event) => setMedication(event.target.value)}
-              style={fieldStyle}
-            />
-          </label>
-          <label>
-            Dose
-            <input
-              value={dose}
-              onChange={(event) => setDose(event.target.value)}
-              style={fieldStyle}
-            />
-          </label>
-          <label>
-            Response
-            <textarea
-              value={response}
-              onChange={(event) => setResponse(event.target.value)}
-              style={fieldStyle}
-              rows={2}
-            />
-          </label>
-          <label>
-            Side effects
-            <textarea
-              value={sideEffects}
-              onChange={(event) => setSideEffects(event.target.value)}
-              style={fieldStyle}
-              rows={2}
-            />
-          </label>
-          <button disabled={busy || !assessmentId} style={primaryButton}>
-            Save medication review
-          </button>
-        </form>
-      </Panel>
-      {(error || notice) && (
-        <Notice error={Boolean(error)}>{error || notice}</Notice>
-      )}
-    </div>
+            </div>
+          )}
+        </section>
+
+        <section style={panelStyle}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            Record medication review
+          </div>
+          <form onSubmit={saveReview} style={{ display: "grid", gap: 12 }}>
+            <label style={labelStyle}>Assessment
+              <select required value={assessmentId} onChange={(e) => setAssessmentId(e.target.value)} style={fieldStyle}>
+                <option value="">Select assessment</option>
+                {cases.map(({ patient, assessment }: any) => (
+                  <option key={assessment.id} value={assessment.id}>{patient.user.firstName} {patient.user.lastName}</option>
+                ))}
+              </select>
+            </label>
+            <label style={labelStyle}>Medication
+              <input required value={medication} onChange={(e) => setMedication(e.target.value)} style={fieldStyle} />
+            </label>
+            <label style={labelStyle}>Dose
+              <input value={dose} onChange={(e) => setDose(e.target.value)} style={fieldStyle} />
+            </label>
+            <label style={labelStyle}>Response
+              <textarea value={response} onChange={(e) => setResponse(e.target.value)} rows={2} style={fieldStyle} />
+            </label>
+            <label style={labelStyle}>Side effects
+              <textarea value={sideEffects} onChange={(e) => setSideEffects(e.target.value)} rows={2} style={fieldStyle} />
+            </label>
+            <button disabled={busy || !assessmentId} style={primaryButton}>{busy ? "Saving…" : "Save medication review"}</button>
+          </form>
+        </section>
+      </div>
+    </main>
   );
 }
 
 function PrescriberExperience() {
-  const [workspace, setWorkspace] = useState<ClinicianWorkspace | null>(null);
-  const [notice, setNotice] = useState("");
+  const [workspace, setWorkspace] = useState<any>(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busyId, setBusyId] = useState("");
+
   async function reload() {
+    setError("");
     try {
-      setWorkspace(
-        await api<ClinicianWorkspace>("/api/v1/clinician/workspace"),
-      );
-      setError("");
+      const wsRes = await authenticatedFetch("/api/v1/clinician/workspace");
+      setWorkspace(await wsRes.json());
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not load prescription reviews.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not load prescriptions.");
     }
   }
-  useEffect(() => {
-    void reload();
-  }, []);
+
+  useEffect(() => { void reload(); }, []);
+
+  const color = portalColor.prescriber;
   const prescriptions =
-    workspace?.patients.flatMap((patient) =>
-      patient.prescriptions.map((prescription) => ({ patient, prescription })),
+    workspace?.patients.flatMap((patient: any) =>
+      patient.prescriptions.map((prescription: any) => ({ patient, prescription })),
     ) ?? [];
+
   async function sign(prescriptionId: string) {
     setBusyId(prescriptionId);
     try {
-      await api(`/api/v1/clinician/prescriptions/${prescriptionId}/sign`, {
-        method: "POST",
-      });
+      const res = await authenticatedFetch(`/api/v1/clinician/prescriptions/${prescriptionId}/sign`, { method: "POST" });
+      if (!res.ok) throw new Error("Could not sign");
       setNotice("Prescription signed and audit history updated.");
       await reload();
     } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not sign prescription.",
-      );
-    } finally {
-      setBusyId("");
-    }
+      setNotice(reason instanceof Error ? reason.message : "Could not sign prescription.");
+    } finally { setBusyId(""); }
   }
+
   return (
-    <div style={gridStyle}>
-      <Panel
-        title="Prescription review queue"
-        detail="Review medications attached to assigned patient records before signing."
-      >
-        <RecordList
-          empty="No assigned prescriptions are awaiting review."
-          items={prescriptions.map(({ patient, prescription }) => ({
-            title: `${patient.user.firstName} ${patient.user.lastName}`,
-            detail: `${prescription.items.map((item) => item.medication).join(", ") || "Medication details pending"} · ${prescription.status.replace(/_/g, " ")}`,
-            actions:
-              prescription.status === "PENDING_SIGNATURE" ? (
-                <button
-                  disabled={busyId === prescription.id}
-                  onClick={() => void sign(prescription.id)}
-                  style={primaryButton}
-                >
-                  {busyId === prescription.id
-                    ? "Signing…"
-                    : "Sign prescription"}
-                </button>
-              ) : undefined,
-          }))}
-        />
-      </Panel>
-      {(error || notice) && (
-        <Notice error={Boolean(error)}>{error || notice}</Notice>
-      )}
-    </div>
+    <main style={{ minHeight: "100vh", background: "#f1f5f9", color: "#0f172a", fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <PortalHeader portal="prescriber" />
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+        {error && <div style={{ ...noticeStyle, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b" }}>{error}</div>}
+        {notice && <div style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}>{notice}</div>}
+
+        <section style={panelStyle}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            Prescription review queue
+          </div>
+          {prescriptions.length === 0 ? (
+            <p style={{ color: "#64748b", fontSize: 13 }}>No prescriptions awaiting review.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 12 }}>
+              {prescriptions.map(({ patient, prescription }: any) => (
+                <div key={prescription.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 16, background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#0f172a" }}>{patient.user.firstName} {patient.user.lastName}</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginBottom: 4 }}>{prescription.items.map((i: any) => i.medication).join(", ") || "Medication details pending"}</div>
+                    <div style={{ fontSize: 11, textTransform: "uppercase", fontWeight: 800, color: prescription.status === "PENDING_SIGNATURE" ? "#d97706" : "#16a34a" }}>
+                      {prescription.status.replace(/_/g, " ")}
+                    </div>
+                  </div>
+                  {prescription.status === "PENDING_SIGNATURE" ? (
+                    <button disabled={busyId === prescription.id} onClick={() => void sign(prescription.id)} style={{ ...primaryButton, fontSize: 12, padding: "8px 14px" }}>
+                      {busyId === prescription.id ? "Signing…" : "Sign prescription"}
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
 
 function FinanceExperience() {
-  const [dashboard, setDashboard] = useState<FinanceData | null>(null);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
   async function reload() {
+    setError("");
     try {
-      const [nextDashboard, nextInvoices] = await Promise.all([
-        api<FinanceData>("/api/v1/finance/dashboard"),
-        api<Invoice[]>("/api/v1/billing/invoices"),
+      const [dRes, iRes] = await Promise.all([
+        authenticatedFetch("/api/v1/finance/dashboard"),
+        authenticatedFetch("/api/v1/billing/invoices"),
       ]);
-      setDashboard(nextDashboard);
-      setInvoices(nextInvoices);
-      setError("");
+      setDashboard(await dRes.json());
+      setInvoices(await iRes.json());
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Could not load finance workspace.",
-      );
+      setError(reason instanceof Error ? reason.message : "Could not load finance workspace.");
     }
   }
-  useEffect(() => {
-    void reload();
-  }, []);
+
+  useEffect(() => { void reload(); }, []);
+
+  const color = portalColor.finance;
+  const pounds = (value: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value / 100);
+
   async function checkout(invoiceId: string) {
     try {
-      const result = await api<{ url?: string; session?: { url?: string } }>(
-        `/api/v1/billing/invoices/${invoiceId}/checkout`,
-        { method: "POST" },
-      );
-      const url = result.url ?? result.session?.url;
+      const result = await authenticatedFetch(`/api/v1/billing/invoices/${invoiceId}/checkout`, { method: "POST" });
+      const url = (result as any).url ?? (result as any).session?.url;
       if (url) window.location.assign(url);
-      else
-        setNotice("Checkout session created but no payment URL was returned.");
+      else setNotice("Checkout created but no payment URL returned.");
     } catch (reason) {
-      setNotice(
-        reason instanceof Error
-          ? reason.message
-          : "Could not start invoice payment.",
-      );
+      setNotice(reason instanceof Error ? reason.message : "Could not start invoice payment.");
     }
   }
-  return (
-    <div style={gridStyle}>
-      <Panel
-        title="Service performance"
-        detail="Live activity and revenue from the current finance period."
-      >
-        <div style={metricGridStyle}>
-          <Metric label="New patients" value={dashboard?.patients.new} />
-          <Metric label="Active patients" value={dashboard?.patients.active} />
-          <Metric
-            label="Waiting list"
-            value={dashboard?.patients.waitingList}
-          />
-          <Metric
-            label="Outstanding"
-            value={
-              dashboard ? pounds(dashboard.outstandingBalancePence) : undefined
-            }
-          />
-          <Metric
-            label="ADHD assessments"
-            value={dashboard?.activity.adhdAssessments}
-          />
-          <Metric
-            label="Medication reviews"
-            value={dashboard?.activity.medicationReviews}
-          />
-        </div>
-      </Panel>
-      <Panel
-        title="Invoices and payments"
-        detail="Open an invoice checkout or review recent account activity."
-      >
-        <RecordList
-          empty="No invoices are available for this account."
-          items={invoices.map((invoice) => ({
-            title: pounds(invoice.totalPence),
-            detail: `${invoice.status.replace(/_/g, " ")} · ${new Date(invoice.createdAt).toLocaleDateString()}`,
-            actions: ["OPEN", "OVERDUE"].includes(invoice.status) ? (
-              <button
-                onClick={() => void checkout(invoice.id)}
-                style={primaryButton}
-              >
-                Pay invoice
-              </button>
-            ) : undefined,
-          }))}
-        />
-      </Panel>
-      {(error || notice) && (
-        <Notice error={Boolean(error)}>{error || notice}</Notice>
-      )}
-    </div>
-  );
-}
 
-function Panel({
-  title,
-  detail,
-  children,
-}: {
-  title: string;
-  detail: string;
-  children: React.ReactNode;
-}) {
   return (
-    <section style={panelStyle}>
-      <header style={{ display: "grid", gap: 6, marginBottom: 18 }}>
-        <h2 style={{ margin: 0, fontSize: 21 }}>{title}</h2>
-        <p style={{ margin: 0, color: "#63776f", lineHeight: 1.5 }}>{detail}</p>
-      </header>
-      {children}
-    </section>
-  );
-}
+    <main style={{ minHeight: "100vh", background: "#f1f5f9", color: "#0f172a", fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <PortalHeader portal="finance" />
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+        {error && <div style={{ ...noticeStyle, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b" }}>{error}</div>}
+        {notice && <div style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}>{notice}</div>}
 
-function RecordList({
-  empty,
-  items,
-}: {
-  empty: string;
-  items: { title: string; detail: string; actions?: React.ReactNode }[];
-}) {
-  if (!items.length)
-    return <p style={{ color: "#63776f", margin: "16px 0 0" }}>{empty}</p>;
-  return (
-    <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
-      {items.map((item, index) => (
-        <article key={`${item.title}-${index}`} style={recordStyle}>
-          <div>
-            <strong>{item.title}</strong>
-            <p style={{ margin: "4px 0 0", color: "#63776f", fontSize: 13 }}>
-              {item.detail}
-            </p>
+        <section style={gridStyle}>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>New patients</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{dashboard?.patients?.new ?? "—"}</div>
           </div>
-          {item.actions}
-        </article>
-      ))}
-    </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Active patients</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{dashboard?.patients?.active ?? "—"}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Outstanding balance</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{dashboard ? pounds(dashboard.outstandingBalancePence) : "—"}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>ADHD assessments</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{dashboard?.activity?.adhdAssessments ?? "—"}</div>
+          </div>
+        </section>
+
+        <section style={panelStyle}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            Invoices and payments
+          </div>
+          {invoices.length === 0 ? (
+            <p style={{ color: "#64748b", fontSize: 13 }}>No invoices available.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {invoices.map((invoice: any) => (
+                <div key={invoice.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 16, background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#0f172a" }}>{pounds(invoice.totalPence)}</div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginBottom: 4 }}>{invoice.status.replace(/_/g, " ")} · {new Date(invoice.createdAt).toLocaleDateString("en-GB")}</div>
+                  </div>
+                  {["OPEN", "OVERDUE"].includes(invoice.status) ? (
+                    <button onClick={() => void checkout(invoice.id)} style={{ ...primaryButton, fontSize: 12, padding: "8px 14px" }}>Pay invoice</button>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#64748b" }}>{invoice.status.replace(/_/g, " ")}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
 
-function ThreadMessages({ thread }: { thread?: Thread }) {
-  if (!thread) return null;
+function AdminExperience() {
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
+  const [riskRankings, setRiskRankings] = useState<any[]>([]);
+  const [forms, setForms] = useState<any[]>([]);
+
+  async function reload() {
+    setError("");
+    try {
+      const [uRes, rRes, fRes] = await Promise.all([
+        authenticatedFetch("/api/v1/admin/users"),
+        authenticatedFetch("/api/v1/clinical-risk/rankings?portal=clinician"),
+        authenticatedFetch("/api/v1/clinical-forms"),
+      ]);
+      setUsers(await uRes.json());
+      setRiskRankings(await rRes.json());
+      setForms(await fRes.json());
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not load admin data.");
+    }
+  }
+
+  useEffect(() => { void reload(); }, []);
+
+  const color = portalColor.admin;
+
   return (
-    <div
-      style={{
-        display: "grid",
-        gap: 8,
-        maxHeight: 230,
-        overflowY: "auto",
-        padding: "4px 0",
-      }}
-    >
-      {thread.messages.map((item) => (
-        <article key={item.id} style={{ background: "#f4f8f5", padding: 10 }}>
-          <small style={{ color: "#63776f" }}>
-            {new Date(item.createdAt).toLocaleString()}
-          </small>
-          <p style={{ margin: "5px 0 0", whiteSpace: "pre-wrap" }}>
-            {item.body}
-          </p>
-        </article>
-      ))}
-    </div>
+    <main style={{ minHeight: "100vh", background: "#f1f5f9", color: "#0f172a", fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <PortalHeader portal="admin" />
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+        {error && <div style={{ ...noticeStyle, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b" }}>{error}</div>}
+        {notice && <div style={{ ...noticeStyle, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#14532b" }}>{notice}</div>}
+
+        <section style={gridStyle}>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Users</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{users.length}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Clinical forms</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{forms.length}</div>
+          </div>
+          <div style={metricStyle}>
+            <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", fontWeight: 800 }}>Risk-ranked patients</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: color }}>{riskRankings.length}</div>
+          </div>
+        </section>
+
+        <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+          <section style={panelStyle}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+              User management
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#64748b", fontWeight: 800, textTransform: "uppercase", fontSize: 11, borderBottom: "2px solid #e2e8f0" }}>
+                    <th style={{ padding: "12px 16px" }}>Name</th>
+                    <th style={{ padding: "12px 16px" }}>Email</th>
+                    <th style={{ padding: "12px 16px" }}>Roles</th>
+                    <th style={{ padding: "12px 16px" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length === 0 ? (
+                    <tr><td colSpan={4} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>No users found.</td></tr>
+                  ) : (
+                    users.map((u: any) => (
+                      <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: 700 }}>{u.firstName} {u.lastName}</td>
+                        <td style={{ padding: "12px 16px", color: "#64748b", fontSize: 12 }}>{u.email}</td>
+                        <td style={{ padding: "12px 16px", fontSize: 11 }}>{(u.roles ?? []).join(", ")}</td>
+                        <td style={{ padding: "12px 16px" }}><span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "#16a34a" }}>{u.status}</span></td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section style={panelStyle}>
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+              Clinical forms library
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#64748b", fontWeight: 800, textTransform: "uppercase", fontSize: 11, borderBottom: "2px solid #e2e8f0" }}>
+                    <th style={{ padding: "12px 16px" }}>Template</th>
+                    <th style={{ padding: "12px 16px" }}>Category</th>
+                    <th style={{ padding: "12px 16px" }}>Instrument</th>
+                    <th style={{ padding: "12px 16px" }}>Submissions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {forms.length === 0 ? (
+                    <tr><td colSpan={4} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>No forms defined yet. Create templates in the UK ADHD clinic.</td></tr>
+                  ) : (
+                    forms.map((f: any) => (
+                      <tr key={f.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: 700 }}>{f.name}</td>
+                        <td style={{ padding: "12px 16px", color: "#64748b", fontSize: 12 }}>{f.category}</td>
+                        <td style={{ padding: "12px 16px", color: "#64748b", fontSize: 12 }}>{f.instrument ?? "—"}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 700 }}>{f._count?.submissions ?? 0}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section style={panelStyle}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
+            Risk-ranked patient worklist
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ textAlign: "left", color: "#64748b", fontWeight: 800, textTransform: "uppercase", fontSize: 11, borderBottom: "2px solid #e2e8f0" }}>
+                  <th style={{ padding: "12px 16px" }}>Rank</th>
+                  <th style={{ padding: "12px 16px" }}>Patient</th>
+                  <th style={{ padding: "12px 16px" }}>Score</th>
+                  <th style={{ padding: "12px 16px" }}>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {riskRankings.slice(0, 10).map((rank: any) => (
+                  <tr key={rank.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "12px 16px", fontWeight: 900, color: color }}>#{rank.rankPosition}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: 700 }}>{rank.patient?.user?.firstName} {rank.patient?.user?.lastName}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: 800, color: "#d97706" }}>{rank.score}</td>
+                    <td style={{ padding: "12px 16px", color: "#64748b", fontSize: 12 }}>{rank.reason ?? "Risk-based prioritisation"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
-
-function Metric({ label, value }: { label: string; value?: string | number }) {
-  return (
-    <div style={metricStyle}>
-      <small style={{ color: "#63776f" }}>{label}</small>
-      <strong style={{ display: "block", marginTop: 8, fontSize: 24 }}>
-        {value ?? "—"}
-      </strong>
-    </div>
-  );
-}
-
-function Notice({
-  children,
-  error,
-}: {
-  children: React.ReactNode;
-  error: boolean;
-}) {
-  return (
-    <p
-      role={error ? "alert" : "status"}
-      style={{
-        ...noticeStyle,
-        background: error ? "#fff3ef" : "#edf6f0",
-        color: error ? "#8d3929" : "#145742",
-      }}
-    >
-      {children}
-    </p>
-  );
-}
-
-function dateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-function pounds(value: number) {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-  }).format(value / 100);
-}
-
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 390px), 1fr))",
-  gap: 18,
-  marginTop: 24,
-};
-const panelStyle = {
-  background: "#fff",
-  border: "1px solid #dce5e0",
-  padding: 20,
-  display: "grid",
-  alignContent: "start",
-  gap: 12,
-};
-const formStyle = { display: "grid", gap: 12 };
-const fieldStyle = {
-  display: "block",
-  width: "100%",
-  minHeight: 42,
-  border: "1px solid #cbd9d2",
-  background: "#fff",
-  color: "#18352b",
-  padding: "9px 11px",
-  marginTop: 6,
-  font: "inherit",
-};
-const primaryButton = {
-  border: 0,
-  background: "#176550",
-  color: "#fff",
-  fontWeight: 750,
-  padding: "11px 14px",
-  cursor: "pointer",
-  justifySelf: "start",
-};
-const linkStyle = { color: "#145742", fontWeight: 750, textDecoration: "none" };
-const secondaryButton = {
-  border: "1px solid #cbd9d2",
-  background: "#fff",
-  color: "#145742",
-  fontWeight: 700,
-  padding: "9px 12px",
-  cursor: "pointer",
-  justifySelf: "start",
-};
-const actionStyle = {
-  display: "flex",
-  flexWrap: "wrap" as const,
-  gap: 8,
-  marginTop: 10,
-};
-const recordStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  flexWrap: "wrap" as const,
-  gap: 12,
-  borderTop: "1px solid #e5ece8",
-  padding: "12px 0",
-};
-const metricGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-  gap: 10,
-};
-const metricStyle = { background: "#f4f8f5", padding: 14 };
-const noticeStyle = {
-  gridColumn: "1 / -1",
-  border: "1px solid #dce5e0",
-  padding: 13,
-  margin: 0,
-};
