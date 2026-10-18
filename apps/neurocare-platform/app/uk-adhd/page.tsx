@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { authenticatedFetch } from "../../lib/client-api";
 import { ClinicalFormRenderer } from "../../components/clinical-form-renderer";
 
+
+
 type ClinicalForm = {
   id: string;
   key: string;

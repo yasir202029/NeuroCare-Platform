@@ -1,0 +1,78 @@
+name: Deploy NeuroCare Platform
+
+on:
+  push:
+    branches: [main, launch-it-rewire-audit-engine]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_ENV: production
+  BACKEND_PORT: 4000
+  FRONTEND_PORT: 3000
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck backend
+        run: pnpm --filter backend run typecheck
+
+      - name: Typecheck frontend
+        run: pnpm --filter @neurocare/platform run typecheck
+
+      - name: Run backend tests
+        run: pnpm --filter backend run test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter @neurocare/platform run build
+
+      - name: Build backend
+        run: pnpm --filter backend run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: docker build -t neurocare-backend:latest ./backend
+
+      - name: Build frontend image
+        run: docker build -t neurocare-frontend:latest ./apps/neurocare-platform
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying NeuroCare Platform..."
+          docker-compose -f docker-compose.yml up -d

@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { authenticatedFetch } from "../../lib/client-api";
 
+
+
 type Patient = {
   id: string;
   user: { firstName: string; lastName: string; email: string };

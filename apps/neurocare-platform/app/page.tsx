@@ -1,5 +1,17 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "NeuroCare Platform — Remote ADHD Assessment & Shared Care",
+  description:
+    "Connected patient and clinical operations for remote ADHD assessment, titration, medication safety, and shared care in the UK.",
+  openGraph: {
+    title: "NeuroCare Platform — Remote ADHD Assessment & Shared Care",
+    description:
+      "Connected patient and clinical operations for remote ADHD assessment, titration, medication safety, and shared care in the UK.",
+    type: "website",
+  },
+};
+
 const branches = [
   {
     href: "/patient",

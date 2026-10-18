@@ -6,6 +6,7 @@ import { config } from "./shared/config.js";
 import { logger } from "./infrastructure/logger.js";
 import routes from "./routes/index.js";
 import { requestContext } from "./middleware/request-context.js";
+import { apiRateLimit, authRateLimit } from "./middleware/rate-limit.js";
 import { errorHandler, notFoundHandler } from "./middleware/errors.js";
 
 const configuredOrigins = (
@@ -51,6 +52,8 @@ app.use((req, _res, next) => {
 });
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false }));
+app.use("/api/v1/auth", authRateLimit);
+app.use("/api/v1", apiRateLimit);
 app.use("/api/v1", routes);
 app.use(notFoundHandler);
 app.use(errorHandler);

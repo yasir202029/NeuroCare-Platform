@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authenticatedFetch } from "../../lib/client-api";
 
+
+
 type CommandCenter = {
   metrics: {
     patients: number;

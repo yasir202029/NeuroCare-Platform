@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { authenticatedFetch } from "../../lib/client-api";
 
+
+
 type RiskScore = {
   id: string;
   patientId: string;

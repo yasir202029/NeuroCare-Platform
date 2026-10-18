@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { config } from './shared/config.js';
 import { disconnectDatabase } from './shared/db.js';
+import { prisma } from './shared/db.js';
 import { logger } from './infrastructure/logger.js';
 import { WebSocketServer, WebSocket } from 'ws';
 import { LiveDataService } from './modules/live-data/live-data.service.js';
@@ -63,6 +64,13 @@ async function registerAllModules() {
 
 // Set up default rails for common clinical scenarios
 async function setupDefaultRails() {
+  const systemUser = await prisma.user.findFirst();
+  if (!systemUser) {
+    logger.warn('No users found, skipping default rail creation');
+    return;
+  }
+  const systemUserId = systemUser.id;
+
   const defaultRails = [
     {
       name: 'Critical Risk Requires Consultant Approval',
@@ -72,7 +80,7 @@ async function setupDefaultRails() {
       severity: RailSeverity.CRITICAL,
       action: RailAction.BLOCK,
       condition: { riskBand: { eq: 'CRITICAL' }, requiresConsultantApproval: { eq: false } },
-      createdById: 'system',
+      createdById: systemUserId,
     },
     {
       name: 'High Risk Medication Change Warning',
@@ -82,7 +90,7 @@ async function setupDefaultRails() {
       severity: RailSeverity.WARNING,
       action: RailAction.WARN,
       condition: { riskBand: { eq: 'HIGH' }, medicationChange: { eq: true } },
-      createdById: 'system',
+      createdById: systemUserId,
     },
     {
       name: 'Safety Alert Auto-Escalation',
@@ -92,7 +100,7 @@ async function setupDefaultRails() {
       severity: RailSeverity.CRITICAL,
       action: RailAction.LOG,
       condition: { severity: { eq: 'CRITICAL' } },
-      createdById: 'system',
+      createdById: systemUserId,
     },
     {
       name: 'GP Communication Requires Approval for Controlled Drugs',
@@ -102,7 +110,7 @@ async function setupDefaultRails() {
       severity: RailSeverity.WARNING,
       action: RailAction.REQUIRE_APPROVAL,
       condition: { controlledDrug: { eq: true } },
-      createdById: 'system',
+      createdById: systemUserId,
     },
   ];
 
