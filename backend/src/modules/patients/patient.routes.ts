@@ -81,4 +81,37 @@ router.get(
     res.json(patient);
   }),
 );
+
+router.get(
+  "/documents/:id/download",
+  asyncHandler(async (req, res) => {
+    const documentId = typeof req.params.id === 'string' ? req.params.id : Array.isArray(req.params.id) ? req.params.id[0] : '';
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
+      include: {
+        patient: { select: { id: true, user: { select: { firstName: true, lastName: true, email: true } } } },
+      },
+    });
+    if (!document) throw notFound("Document not found");
+    const userId = req.user!.id;
+    const patient = await prisma.patient.findUnique({
+      where: { userId },
+    });
+    if (!patient || document.patientId !== patient.id) throw notFound("Document not found");
+    await prisma.documentAccessLog.create({
+      data: {
+        documentId,
+        actorId: req.user!.id,
+        action: "DOWNLOAD",
+        ipAddress: req.ip,
+      },
+    });
+    const content = `Document: ${document.name}\nType: ${document.type}\nMime: ${document.mimeType}\nSize: ${document.sizeBytes} bytes\nCreated: ${document.createdAt}\nPatient: ${document.patient.user.firstName} ${document.patient.user.lastName}\n\n---\nThis is a placeholder download. Actual file storage integration required.`;
+    res.setHeader("Content-Disposition", `attachment; filename="${document.name}"`);
+    res.setHeader("Content-Type", document.mimeType || "application/octet-stream");
+    res.setHeader("Content-Length", String(Buffer.byteLength(content)));
+    res.send(content);
+  }),
+);
+
 export default router;

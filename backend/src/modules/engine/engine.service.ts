@@ -11,6 +11,9 @@ export const engineRules: Rule[] = [
   { id: 'ecg-return', from: [WorkflowStage.ECG_REQUESTED], to: [WorkflowStage.ASSESSMENT_REVIEW], description: 'ECG verification reopens assessment review.' },
   { id: 'medication-pathways', from: [WorkflowStage.TITRATION, WorkflowStage.PRESCRIBING], to: [WorkflowStage.PRESCRIBING, WorkflowStage.SHARED_CARE, WorkflowStage.DISCHARGE], description: 'Medication care progresses to prescribing, shared care, or discharge.' },
   { id: 'case-close', from: [WorkflowStage.SHARED_CARE], to: [WorkflowStage.DISCHARGE], description: 'Shared care can proceed to discharge after required care actions are complete.' },
+  { id: 'titration-escalation', from: [WorkflowStage.TITRATION], to: [WorkflowStage.ASSESSMENT_REVIEW, WorkflowStage.OUTCOME], description: 'Titration review can escalate back to assessment review or record an authorised outcome.' },
+  { id: 'more-info-return', from: [WorkflowStage.MORE_INFORMATION_REQUIRED], to: [WorkflowStage.ASSESSMENT_REVIEW, WorkflowStage.DISCHARGE], description: 'Received information returns to assessment review, or the referral is closed if not supplied.' },
+  { id: 'shared-care-reopen', from: [WorkflowStage.PRESCRIBING], to: [WorkflowStage.SHARED_CARE, WorkflowStage.PRESCRIBING], description: 'Prescribing can hand over to shared care or continue repeat prescriptions.' },
 ];
 
 const generatedTask: Partial<Record<WorkflowStage, { type: TeamQueueType; title: string; assignedToId?: string; dueAt?: Date }>> = {

@@ -208,6 +208,11 @@ function PatientExperience() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [workflowStage, setWorkflowStage] = useState<string | null>(null);
+  const [availableTransitions, setAvailableTransitions] = useState<string[]>([]);
+
+  type WorkflowStage = "REFERRAL" | "ASSESSMENT" | "TITRATION" | "PRESCRIBING" | "SHARED_CARE" | "DISCHARGE";
 
   async function reload() {
     setError("");
@@ -243,12 +248,56 @@ function PatientExperience() {
       setRiskScore(risk.score ?? null);
       setThreadId((current) => current || (threadsJson as Thread[])[0]?.id || "");
       setSlotId((current) => current || (slotsJson as Slot[])[0]?.id || "");
+
+      // Detect current workflow stage from latest audit event
+      const eventsRes = await authenticatedFetch("/api/v1/engine/events");
+      const events = await eventsRes.json();
+      const latest = events.find((e: any) => e.resourceId === profileJson.id) || events[0];
+      if (latest?.metadata?.to) {
+        setWorkflowStage(latest.metadata.to as string);
+        setAvailableTransitions(getTransitions(latest.metadata.to as string));
+      }
     } catch (reason) {
       setError(
         reason instanceof Error
           ? reason.message
           : "Could not load your care workspace.",
       );
+    }
+  }
+
+  function getTransitions(stage: string): string[] {
+    const rules: Record<string, string[]> = {
+      REFERRAL: ["ASSESSMENT"],
+      ADMIN_TRIAGE: ["ASSESSMENT", "MORE_INFORMATION_REQUIRED"],
+      ASSESSMENT: ["TITRATION", "MORE_INFORMATION_REQUIRED", "ECG_REQUESTED"],
+      ASSESSMENT_REVIEW: ["TITRATION", "PRESCRIBING", "MORE_INFORMATION_REQUIRED", "ECG_REQUESTED"],
+      TITRATION: ["PRESCRIBING", "SHARED_CARE", "DISCHARGE"],
+      PRESCRIBING: ["SHARED_CARE", "DISCHARGE"],
+      SHARED_CARE: ["DISCHARGE"],
+      DISCHARGE: [],
+    };
+    return rules[stage] || [];
+  }
+
+  async function runTransition(toStage: string, reason: string) {
+    setBusy(true);
+    try {
+      const res = await authenticatedFetch("/api/v1/engine/workflows/transition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId: profile!.id, toStage, reason }),
+      });
+      if (!res.ok) throw new Error("Transition failed");
+      await res.json();
+      setNotice(`Advanced to ${toStage.replace(/_/g, " ")}`);
+      setWorkflowStage(toStage);
+      setAvailableTransitions(getTransitions(toStage));
+      await reload();
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "Transition failed.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -328,6 +377,30 @@ function PatientExperience() {
     }
   }
 
+  async function downloadDocument(doc: Document) {
+    setBusy(true);
+    try {
+      const res = await authenticatedFetch(`/api/v1/patients/documents/${doc.id}/download`, {
+        method: "GET",
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setNotice(`Downloaded ${doc.name}`);
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "Download failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const color = portalColor.patient;
   const riskColor =
     riskScore?.riskBand === "CRITICAL"
@@ -337,6 +410,20 @@ function PatientExperience() {
         : riskScore?.riskBand === "MODERATE"
           ? "#ca8a04"
           : "#16a34a";
+
+  const stageLabel: Record<string, string> = {
+    REFERRAL: "Referral",
+    ADMIN_TRIAGE: "Admin Triage",
+    ASSESSMENT: "Assessment",
+    DIAGNOSIS: "Diagnosis",
+    MORE_INFORMATION_REQUIRED: "More Information Required",
+    ECG_REQUESTED: "ECG Requested",
+    ASSESSMENT_REVIEW: "Assessment Review",
+    TITRATION: "Titration",
+    PRESCRIBING: "Prescribing",
+    SHARED_CARE: "Shared Care",
+    DISCHARGE: "Discharge",
+  };
 
   return (
     <main
@@ -370,20 +457,84 @@ function PatientExperience() {
           </div>
         )}
 
-        {/* Risk score banner */}
+        {/* Workflow Stage Banner */}
+        {workflowStage && (
+          <section
+            style={{
+              background: "#ffffff",
+              border: `1px solid ${riskColor}33`,
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 24,
+              borderLeft: `4px solid ${riskColor}`,
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: `${riskColor}1a`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: riskColor,
+                  fontWeight: 900,
+                  fontSize: 20,
+                }}
+              >
+                ✓
+              </div>
+              <div>
+                <div style={{ color: riskColor, fontSize: 11, textTransform: "uppercase", fontWeight: 900, letterSpacing: 1 }}>
+                  ADHD Care Pathway
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 900, color: "#0f172a", marginTop: 4 }}>
+                  {stageLabel[workflowStage] || workflowStage}
+                </div>
+                <div style={{ color: "#64748b", fontSize: 13, marginTop: 2 }}>
+                  Current treatment pathway stage
+                </div>
+              </div>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {availableTransitions.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => runTransition(t, `Patient-initiated transition to ${t}`)}
+                    disabled={busy}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      border: `1px solid ${riskColor}`,
+                      background: "#ffffff",
+                      color: riskColor,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      cursor: busy ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {t.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Risk Score Banner */}
         {riskScore && (
           <section
             style={{
               background: "#ffffff",
               border: `1px solid ${riskColor}33`,
-              borderRadius: 14,
-              padding: 20,
+              borderRadius: 16,
+              padding: 24,
               marginBottom: 24,
               borderLeft: `4px solid ${riskColor}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
             }}
           >
             <div>
@@ -542,18 +693,34 @@ function PatientExperience() {
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 10 }}>
               Your documents
             </div>
-            <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            <div style={{ overflowX: "auto" }}>
               {documents.length === 0 ? (
                 <p style={{ color: "#64748b", fontSize: 13, textAlign: "center", padding: 20 }}>No documents uploaded.</p>
               ) : (
                 <ul style={{ padding: 0, margin: 0, listStyle: "none" }}>
                   {documents.map((doc) => (
-                    <li key={doc.id} style={{ padding: "10px 0", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
+                    <li key={doc.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", borderRadius: 8, marginBottom: 8 }}>
+                      <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{doc.name}</div>
                         <div style={{ color: "#64748b", fontSize: 11 }}>{doc.type} · {doc.mimeType}</div>
                       </div>
                       <div style={{ color: "#64748b", fontSize: 11 }}>{new Date(doc.createdAt).toLocaleDateString("en-GB")}</div>
+                      <button
+                        onClick={() => downloadDocument(doc)}
+                        disabled={busy}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: 8,
+                          border: `1px solid ${color}`,
+                          background: "#ffffff",
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: busy ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        Download
+                      </button>
                     </li>
                   ))}
                 </ul>
