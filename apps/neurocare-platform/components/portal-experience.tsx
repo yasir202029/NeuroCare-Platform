@@ -252,10 +252,6 @@ function PatientExperience() {
     }
   }
 
-  useEffect(() => {
-    void reload();
-  }, []);
-
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -310,7 +306,7 @@ function PatientExperience() {
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedPatientId && !threadId) return;
+    if (!threadId) return setNotice("No conversation thread available.");
     setBusy(true);
     try {
       const res = await authenticatedFetch("/api/v1/messages", {
@@ -321,7 +317,6 @@ function PatientExperience() {
       if (!res.ok) throw new Error("Could not send message");
       setSubject("");
       setMessage("");
-      setThreadId("");
       setNotice("Message sent to your care team.");
       await reload();
     } catch (reason) {
@@ -538,7 +533,7 @@ function PatientExperience() {
                 Message
                 <textarea required value={message} onChange={(e) => setMessage(e.target.value)} rows={2} style={fieldStyle} />
               </label>
-              <button disabled={busy} style={primaryButton}>Send message</button>
+              <button disabled={busy || !threadId} style={primaryButton}>Send message</button>
             </form>
           </section>
 
@@ -577,8 +572,6 @@ function PatientExperience() {
   );
 }
 
-const selectedPatientId = "";
-
 function ClinicianExperience() {
   const [workspace, setWorkspace] = useState<any>(null);
   const [riskRankings, setRiskRankings] = useState<any[]>([]);
@@ -586,6 +579,9 @@ function ClinicianExperience() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [transitionBusy, setTransitionBusy] = useState<string | null>(null);
+
+  type WorkflowStage = "REFERRAL" | "ADMIN_TRIAGE" | "ASSESSMENT" | "DIAGNOSIS" | "MORE_INFORMATION_REQUIRED" | "ECG_REQUESTED" | "ASSESSMENT_REVIEW" | "TITRATION" | "PRESCRIBING" | "SHARED_CARE" | "DISCHARGE";
 
   async function reload() {
     setError("");
@@ -614,6 +610,52 @@ function ClinicianExperience() {
   const color = portalColor.clinician;
   const patients = workspace?.patients ?? [];
   const highRisk = patients.filter((p: any) => p.assessments?.some((a: any) => a.adhd?.titrationPlans?.some((t: any) => t.status === "ACTIVE")));
+
+  const stageLabel: Record<string, string> = {
+    REFERRAL: "Referral",
+    ADMIN_TRIAGE: "Admin Triage",
+    ASSESSMENT: "Assessment",
+    DIAGNOSIS: "Diagnosis",
+    MORE_INFORMATION_REQUIRED: "More Information Required",
+    ECG_REQUESTED: "ECG Requested",
+    ASSESSMENT_REVIEW: "Assessment Review",
+    TITRATION: "Titration",
+    PRESCRIBING: "Prescribing",
+    SHARED_CARE: "Shared Care",
+    DISCHARGE: "Discharge",
+  };
+
+  const transitionsFrom: Record<string, string[]> = {
+    REFERRAL: ["ASSESSMENT"],
+    ADMIN_TRIAGE: ["ASSESSMENT", "MORE_INFORMATION_REQUIRED"],
+    ASSESSMENT: ["OUTCOME", "MORE_INFORMATION_REQUIRED", "ECG_REQUESTED"],
+    ASSESSMENT_REVIEW: ["OUTCOME", "MORE_INFORMATION_REQUIRED", "ECG_REQUESTED"],
+    OUTCOME: ["TITRATION", "PRESCRIBING", "SHARED_CARE", "DISCHARGE"],
+    ECG_REQUESTED: ["ASSESSMENT_REVIEW"],
+    TITRATION: ["PRESCRIBING", "SHARED_CARE", "DISCHARGE"],
+    PRESCRIBING: ["SHARED_CARE", "DISCHARGE"],
+    SHARED_CARE: ["DISCHARGE"],
+    DISCHARGE: [],
+  };
+
+  async function runTransition(patientId: string, toStage: WorkflowStage, reason: string) {
+    setTransitionBusy(patientId);
+    try {
+      const res = await authenticatedFetch("/api/v1/engine/workflows/transition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId, toStage, reason }),
+      });
+      if (!res.ok) throw new Error("Transition failed");
+      await res.json();
+      setNotice(`Advanced patient to ${toStage.replace(/_/g, " ")}`);
+      await reload();
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "Transition failed.");
+    } finally {
+      setTransitionBusy(null);
+    }
+  }
 
   return (
     <main style={{ minHeight: "100vh", background: "#f1f5f9", color: "#0f172a", fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -666,41 +708,82 @@ function ClinicianExperience() {
           )}
         </section>
 
-        {/* Risk-ranked worklist */}
+        {/* Risk-ranked worklist with workflow branches */}
         <section style={panelStyle}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, color: "#64748b", marginBottom: 12 }}>
             Prioritised patient worklist (NICE-aligned risk ranking)
           </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ textAlign: "left", color: "#64748b", fontWeight: 800, textTransform: "uppercase", fontSize: 11, borderBottom: "2px solid #e2e8f0" }}>
-                  <th style={{ padding: "12px 16px" }}>Rank</th>
-                  <th style={{ padding: "12px 16px" }}>Patient</th>
-                  <th style={{ padding: "12px 16px" }}>Risk score</th>
-                  <th style={{ padding: "12px 16px" }}>Band</th>
-                  <th style={{ padding: "12px 16px" }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {riskRankings.length === 0 ? (
-                  <tr><td colSpan={5} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>No ranked patients yet. Run risk assessment from the UK ADHD clinic.</td></tr>
-                ) : (
-                  riskRankings.map((rank: any) => (
-                    <tr key={rank.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "12px 16px", fontWeight: 900, color: color }}>#{rank.rankPosition}</td>
-                      <td style={{ padding: "12px 16px", fontWeight: 700 }}>{rank.patient?.user?.firstName} {rank.patient?.user?.lastName}</td>
-                      <td style={{ padding: "12px 16px", fontWeight: 800, color: "#d97706" }}>{rank.score}</td>
-                      <td style={{ padding: "12px 16px" }}><span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "#b91c1c" }}>HIGH</span></td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <Link href={`/patient/${rank.patientId}`} style={{ color: "#4e6ef2", fontWeight: 700, textDecoration: "none", fontSize: 12 }}>Open record →</Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {riskRankings.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center", color: "#64748b" }}>
+              <p>No ranked patients yet.</p>
+              <p style={{ fontSize: 12, marginTop: 8 }}>Complete assessments in the UK ADHD clinic to generate risk rankings.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#64748b", fontWeight: 800, textTransform: "uppercase", fontSize: 11, borderBottom: "2px solid #e2e8f0" }}>
+                    <th style={{ padding: "12px 16px" }}>Rank</th>
+                    <th style={{ padding: "12px 16px" }}>Patient</th>
+                    <th style={{ padding: "12px 16px" }}>Risk score</th>
+                    <th style={{ padding: "12px 16px" }}>Band</th>
+                    <th style={{ padding: "12px 16px" }}>Current stage</th>
+                    <th style={{ padding: "12px 16px" }}>Workflow actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {riskRankings.map((rank: any) => {
+                    const patient = rank.patient;
+                    const currentStage = patient?.currentStage || "REFERRAL";
+                    const available = transitionsFrom[currentStage as keyof typeof transitionsFrom] || [];
+                    return (
+                      <tr key={rank.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: 900, color: color }}>#{rank.rankPosition}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 700 }}>{patient?.user?.firstName} {patient?.user?.lastName}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 800, color: "#d97706" }}>{rank.score}</td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <span style={{ display: "inline-block", padding: "4px 8px", borderRadius: 4, background: "#fef2f2", color: "#b91c1c", fontSize: 11, fontWeight: 800 }}>
+                            {rank.riskBand || "LOW"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 12, color: "#334155", fontWeight: 600 }}>
+                          {stageLabel[currentStage] || currentStage}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          {available.length === 0 ? (
+                            <span style={{ fontSize: 11, color: "#94a3b8" }}>Complete</span>
+                          ) : (
+                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                              {available.map((t) => (
+                                <button
+                                  key={t}
+                                  onClick={() => runTransition(patient.id, t as WorkflowStage, `Clinician-initiated transition to ${t}`)}
+                                  disabled={transitionBusy === patient.id}
+                                  style={{
+                                    padding: "6px 10px",
+                                    borderRadius: 6,
+                                    border: `1px solid ${color}`,
+                                    background: "#ffffff",
+                                    color: color,
+                                    fontSize: 10,
+                                    fontWeight: 800,
+                                    textTransform: "uppercase",
+                                    cursor: transitionBusy === patient.id ? "not-allowed" : "pointer",
+                                  }}
+                                >
+                                  {t.replace(/_/g, " ")}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         {/* Patient cards */}
