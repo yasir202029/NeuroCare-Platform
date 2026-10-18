@@ -14,3 +14,4 @@ export const badRequest = (message: string, details?: unknown) => new AppError(4
 export const unauthorized = (message = 'Authentication required') => new AppError(401, message, 'UNAUTHORIZED');
 export const forbidden = (message = 'You do not have permission to perform this action') => new AppError(403, message, 'FORBIDDEN');
 export const notFound = (message = 'Resource not found') => new AppError(404, message, 'NOT_FOUND');
+export const unavailable = (message: string, details?: unknown) => new AppError(503, message, 'SERVICE_UNAVAILABLE', details);

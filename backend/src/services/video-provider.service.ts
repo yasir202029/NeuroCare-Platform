@@ -1,6 +1,6 @@
 import { VideoProvider } from "@prisma/client";
 import { config } from "../shared/config.js";
-import { badRequest } from "../shared/errors.js";
+import { badRequest, unavailable } from "../shared/errors.js";
 
 export type VideoMeeting = {
   provider: VideoProvider;
@@ -18,6 +18,16 @@ export class VideoProviderService {
       throw badRequest(
         "Microsoft Teams meeting creation is not configured. Select Zoom or configure the Teams integration.",
       );
+    }
+    if (config.VIDEO_DEV_MODE || !this.hasZoomCredentials()) {
+      const sessionId = `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const base = (config.API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
+      return {
+        provider,
+        providerSessionId: sessionId,
+        joinUrl: `${base}/api/v1/video/dev/session/${sessionId}`,
+        clinicianJoinUrl: `${base}/api/v1/video/dev/session/${sessionId}?role=host`,
+      };
     }
     const accessToken = await this.zoomAccessToken();
     const response = await fetch("https://api.zoom.us/v2/users/me/meetings", {
@@ -55,6 +65,10 @@ export class VideoProviderService {
   async clinicianJoinUrl(provider: VideoProvider, providerSessionId: string) {
     if (provider !== VideoProvider.ZOOM)
       throw badRequest("Host links are not configured for this video provider");
+    if (config.VIDEO_DEV_MODE || !this.hasZoomCredentials()) {
+      const base = (config.API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
+      return `${base}/api/v1/video/dev/session/${encodeURIComponent(providerSessionId)}?role=host`;
+    }
     const accessToken = await this.zoomAccessToken();
     const response = await fetch(
       `https://api.zoom.us/v2/meetings/${encodeURIComponent(providerSessionId)}`,
@@ -71,12 +85,31 @@ export class VideoProviderService {
     return meeting.start_url;
   }
 
-  async startRecording(_sessionId: string): Promise<never> {
-    throw badRequest("Zoom recording is not configured for this clinic");
+  async startRecording(sessionId: string): Promise<never> {
+    if (!this.hasZoomCredentials())
+      throw unavailable("Zoom cloud recording is not configured for this clinic");
+    throw badRequest("Zoom cloud recording is not configured for this clinic");
   }
 
-  async stopRecording(_providerRecordingId: string): Promise<never> {
-    throw badRequest("Zoom recording is not configured for this clinic");
+  async stopRecording(providerRecordingId: string): Promise<never> {
+    if (!this.hasZoomCredentials())
+      throw unavailable("Zoom cloud recording is not configured for this clinic");
+    throw badRequest("Zoom cloud recording is not configured for this clinic");
+  }
+
+  /** True when real Zoom Server-to-Server OAuth credentials are configured. */
+  private hasZoomCredentials(): boolean {
+    const accountId = config.ZOOM_ACCOUNT_ID;
+    const clientId = config.ZOOM_CLIENT_ID;
+    const clientSecret = config.ZOOM_CLIENT_SECRET;
+    return Boolean(
+      accountId &&
+        clientId &&
+        clientSecret &&
+        ![accountId, clientId, clientSecret].some((value) =>
+          value.toLowerCase().includes("replace"),
+        ),
+    );
   }
 
   private async zoomAccessToken() {
