@@ -63,3 +63,6 @@ Thumbs.db
 
 .next/
 *.local
+
+# Local dev TLS certs (self-signed, never commit)
+ssl/*.pem

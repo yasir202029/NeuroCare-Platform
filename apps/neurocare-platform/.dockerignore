@@ -1,5 +1,44 @@
+# Docker excludes - Frontend
 node_modules
 .next
-tsconfig.tsbuildinfo
+npm-debug.log
+README.md
 .env
-.env.*
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# Logs
+logs
+*.log
+
+# Public assets (built during build)
+public/build

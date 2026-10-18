@@ -1,6 +1,0 @@
-services:
-  launchit:
-    image: launchit
-    build:
-      context: .
-      dockerfile: ./Dockerfile
