@@ -64,6 +64,13 @@ const branches = [
     description:
       "Complete remote ADHD assessments with dynamic clinical forms and audited pathways.",
   },
+  {
+    href: "/risk-ranking",
+    label: "Risk Ranking",
+    group: "CLINICAL SAFETY",
+    description:
+      "NICE-aligned patient risk stratification and prioritised worklist for clinicians.",
+  },
 ];
 
 export default function Home() {

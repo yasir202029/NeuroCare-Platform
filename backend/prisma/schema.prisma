@@ -568,50 +568,54 @@ model CoverArrangement {
 }
 
 model User {
-  id                 String                   @id @default(cuid())
-  email              String                   @unique
-  passwordHash       String
-  firstName          String
-  lastName           String
-  phone              String?
-  status             UserStatus               @default(ACTIVE)
-  roles              Role[]
-  roleAssignments    UserRole[]
-  emailVerifiedAt    DateTime?
-  mfaEnabled         Boolean                  @default(false)
-  mfaFactors         MfaFactor[]
-  sessions           UserSession[]
-  refreshTokens      RefreshToken[]
-  passwordResets     PasswordResetToken[]
-  emailVerifications EmailVerificationToken[]
-  mfaChallenges      MfaChallenge[]
-  devices            Device[]
-  loginHistory       LoginHistory[]
-  securityAlerts     SecurityAlert[]
-  patient            Patient?
-  clinician          Clinician?
-  sentMessages       Message[]                @relation("MessageSender")
-  notifications      Notification[]
-  auditEvents        AuditEvent[]             @relation("AuditActor")
-  assignedTasks      ClinicalTask[]           @relation("TaskAssignee")
-  noteVersions       ClinicalNoteVersion[]    @relation("NoteVersionAuthor")
-  uploadedVersions   DocumentVersion[]        @relation("DocumentVersionUploader")
-  documentAccesses   DocumentAccessLog[]      @relation("DocumentAccessActor")
-  reviewedAiDocs     AiGeneratedDocument[]    @relation("AiReviewer")
-  reportVersions     ReportVersion[]          @relation("ReportVersionAuthor")
-  reportAudits       ReportAuditEvent[]       @relation("ReportAuditActor")
-  assignedComplaints Complaint[]              @relation("ComplaintAssignee")
-  teamMemberships    TeamMember[]
-  patientAssignments PatientAssignment[]      @relation("AssignmentUser")
-  grantedAssignments PatientAssignment[]      @relation("AssignmentGrantor")
-  originalCover      CoverArrangement[]       @relation("OriginalClinicianCover")
-  coveringPatients   CoverArrangement[]       @relation("CoverClinician")
-  workflowActions    WorkflowTransition[]     @relation("WorkflowActor")
-  queueAssignments   TeamQueueItem[]          @relation("QueueAssignee")
-  formDefinitions    ClinicalFormDefinition[] @relation("FormDefinitionAuthor")
-  formSubmissions    ClinicalFormSubmission[] @relation("FormSubmissionAuthor")
-  createdAt          DateTime                 @default(now())
-  updatedAt          DateTime                 @updatedAt
+  id                       String                   @id @default(cuid())
+  email                    String                   @unique
+  passwordHash             String
+  firstName                String
+  lastName                 String
+  phone                    String?
+  status                   UserStatus               @default(ACTIVE)
+  roles                    Role[]
+  roleAssignments          UserRole[]
+  emailVerifiedAt          DateTime?
+  mfaEnabled               Boolean                  @default(false)
+  mfaFactors               MfaFactor[]
+  sessions                 UserSession[]
+  refreshTokens            RefreshToken[]
+  passwordResets           PasswordResetToken[]
+  emailVerifications       EmailVerificationToken[]
+  mfaChallenges            MfaChallenge[]
+  devices                  Device[]
+  loginHistory             LoginHistory[]
+  securityAlerts           SecurityAlert[]
+  patient                  Patient?
+  clinician                Clinician?
+  sentMessages             Message[]                @relation("MessageSender")
+  notifications            Notification[]
+  auditEvents              AuditEvent[]             @relation("AuditActor")
+  assignedTasks            ClinicalTask[]           @relation("TaskAssignee")
+  noteVersions             ClinicalNoteVersion[]    @relation("NoteVersionAuthor")
+  uploadedVersions         DocumentVersion[]        @relation("DocumentVersionUploader")
+  documentAccesses         DocumentAccessLog[]      @relation("DocumentAccessActor")
+  reviewedAiDocs           AiGeneratedDocument[]    @relation("AiReviewer")
+  reportVersions           ReportVersion[]          @relation("ReportVersionAuthor")
+  reportAudits             ReportAuditEvent[]       @relation("ReportAuditActor")
+  assignedComplaints       Complaint[]              @relation("ComplaintAssignee")
+  teamMemberships          TeamMember[]
+  patientAssignments       PatientAssignment[]      @relation("AssignmentUser")
+  grantedAssignments       PatientAssignment[]      @relation("AssignmentGrantor")
+  originalCover            CoverArrangement[]       @relation("OriginalClinicianCover")
+  coveringPatients         CoverArrangement[]       @relation("CoverClinician")
+  workflowActions          WorkflowTransition[]     @relation("WorkflowActor")
+  queueAssignments         TeamQueueItem[]          @relation("QueueAssignee")
+  formDefinitions          ClinicalFormDefinition[] @relation("FormDefinitionAuthor")
+  formSubmissions          ClinicalFormSubmission[] @relation("FormSubmissionAuthor")
+  riskScoresAuthored       ClinicalRiskScore[]      @relation("RiskScoreAuthor")
+  rankingsReviewed         PatientRanking[]         @relation("RankingReviewer")
+  safetyAlertsAuthored     MedicationSafetyAlert[]  @relation("SafetyAlertAuthor")
+  safetyAlertsAcknowledged MedicationSafetyAlert[]  @relation("SafetyAlertAcknowledger")
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 }
 
 model MfaFactor {
@@ -785,6 +789,9 @@ model Patient {
   queueItems           TeamQueueItem[]
   coverArrangements    CoverArrangement[]
   formSubmissions      ClinicalFormSubmission[] @relation("FormSubmissionPatient")
+  riskScores           ClinicalRiskScore[]
+  rankings             PatientRanking[]
+  safetyAlerts         MedicationSafetyAlert[]
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
 }
@@ -1828,4 +1835,67 @@ model ClinicalFormSubmission {
 
   @@index([formDefinitionId, patientId])
   @@index([patientId, createdAt])
+}
+
+model ClinicalRiskScore {
+  id            String    @id @default(cuid())
+  patientId     String
+  patient       Patient   @relation(fields: [patientId], references: [id])
+  clinicianId   String?
+  clinician     User?     @relation("RiskScoreAuthor", fields: [clinicianId], references: [id])
+  overallScore  Int
+  riskBand      RiskBand
+  factors       Json
+  niceAligned   Boolean   @default(true)
+  reviewedAt    DateTime?
+  nextReviewDue DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([patientId, createdAt])
+  @@index([riskBand, createdAt])
+}
+
+enum RiskBand {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+model PatientRanking {
+  id           String    @id @default(cuid())
+  patientId    String
+  patient      Patient   @relation(fields: [patientId], references: [id])
+  rankPosition Int
+  score        Int
+  reason       String?
+  portal       String
+  reviewedById String?
+  reviewedBy   User?     @relation("RankingReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([patientId, portal])
+  @@index([portal, rankPosition])
+}
+
+model MedicationSafetyAlert {
+  id               String        @id @default(cuid())
+  patientId        String
+  patient          Patient       @relation(fields: [patientId], references: [id])
+  clinicianId      String?
+  clinician        User?         @relation("SafetyAlertAuthor", fields: [clinicianId], references: [id])
+  alertType        String
+  severity         AuditSeverity @default(WARNING)
+  message          String
+  acknowledged     Boolean       @default(false)
+  acknowledgedAt   DateTime?
+  acknowledgedById String?
+  acknowledgedBy   User?         @relation("SafetyAlertAcknowledger", fields: [acknowledgedById], references: [id])
+  createdAt        DateTime      @default(now())
+
+  @@index([patientId, acknowledged, createdAt])
+  @@index([severity, createdAt])
 }
