@@ -10,7 +10,7 @@ import { prisma } from "../../shared/db.js";
 import { asyncHandler } from "../../shared/http.js";
 import { audit } from "../../middleware/audit.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
-import { badRequest, forbidden, notFound } from "../../shared/errors.js";
+import { badRequest, forbidden, notFound, unavailable } from "../../shared/errors.js";
 import { AiSessionService } from "../../services/ai-session.service.js";
 import { VideoProviderService } from "../../services/video-provider.service.js";
 
@@ -22,6 +22,22 @@ const joinableAppointmentStatuses: AppointmentStatus[] = [
   AppointmentStatus.IN_PROGRESS,
 ];
 router.use(requireAuth);
+
+/** Dev-mode join landing page — reachable without Zoom credentials. */
+router.get(
+  "/dev/session/:sessionId",
+  asyncHandler(async (req, res) => {
+    const sessionId = String(req.params.sessionId);
+    const role = typeof req.user?.id === "string" ? "participant" : "participant";
+    res.json({
+      provider: "DEV",
+      sessionId,
+      role: req.query.role ?? role,
+      message: "Dev video room. Connect a real provider in production.",
+      status: "waiting-room",
+    });
+  }),
+);
 
 async function requireAssignedClinician(
   sessionId: string,
@@ -357,7 +373,7 @@ router.post(
     });
     if (!consent)
       throw badRequest("Recording consent is required before recording");
-    throw badRequest("Zoom cloud recording is not configured for this clinic");
+    throw unavailable("Zoom cloud recording is not configured for this clinic");
   }),
 );
 
@@ -367,7 +383,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const id = String(req.params.id);
     await requireAssignedClinician(id, req.user!.id, req.user!.roles);
-    throw badRequest("Zoom cloud recording is not configured for this clinic");
+    throw unavailable("Zoom cloud recording is not configured for this clinic");
   }),
 );
 

@@ -25,6 +25,8 @@ const schema = z.object({
   ZOOM_CLIENT_ID: z.string().optional(),
   ZOOM_CLIENT_SECRET: z.string().optional(),
   VIDEO_DEFAULT_PROVIDER: z.enum(['TEAMS', 'ZOOM']).default('ZOOM'),
+  VIDEO_DEV_MODE: z.coerce.boolean().default(false),
+  API_BASE_URL: z.string().url().optional(),
   VIDEO_RECORDING_ENABLED: z.coerce.boolean().default(false),
   TRANSCRIPTION_PROVIDER: z.enum(['openai', 'deepgram', 'mock']).default('mock'),
   TRANSCRIPTION_LANGUAGE: z.string().default('en-GB'),
