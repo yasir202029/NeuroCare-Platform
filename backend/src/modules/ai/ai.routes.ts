@@ -7,6 +7,7 @@ import { AiService } from '../../services/ai.service.js';
 import { prisma } from '../../shared/db.js';
 import { audit } from '../../middleware/audit.js';
 import { notFound } from '../../shared/errors.js';
+import { requireFeature } from '../config/config.middleware.js';
 
 const router = Router();
 const service = new AiService();
@@ -14,6 +15,7 @@ router.use(requireAuth, requireRole(Role.PSYCHIATRIST, Role.PRESCRIBER, Role.NUR
 
 router.post(
   '/report-draft',
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({
       assessmentType: z.string(),
@@ -26,6 +28,7 @@ router.post(
 
 router.post(
   '/summarise',
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({ text: z.string().min(1).max(50000) }).parse(req.body);
     res.json(await service.summarise(body.text));
@@ -35,6 +38,7 @@ router.post(
 router.post(
   '/consultation-insights',
   audit('AI_CONSULTATION_INSIGHTS', 'AiInsight'),
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({
       patientId: z.string().cuid(),
@@ -48,6 +52,7 @@ router.post(
 
 router.get(
   '/insights/:patientId',
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const insights = await prisma.aiInsight.findMany({
       where: { patientId: String(req.params.patientId), dismissed: false },
@@ -74,6 +79,7 @@ router.patch(
 router.post(
   '/letter',
   audit('AI_LETTER_GENERATED', 'AiGeneratedDocument'),
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({
       patientId: z.string().cuid(),
@@ -89,6 +95,7 @@ router.post(
 router.post(
   '/medication-safety',
   audit('AI_MEDICATION_SAFETY_CHECK', 'MedicationSafetyAlert'),
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({
       patientId: z.string().cuid(),
@@ -106,6 +113,7 @@ router.post(
 router.post(
   '/risk-prediction',
   audit('AI_RISK_PREDICTION', 'AiInsight'),
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({
       patientId: z.string().cuid(),
@@ -119,6 +127,7 @@ router.post(
 router.post(
   '/titration-plan',
   audit('AI_TITRATION_PLAN', 'AiRun'),
+  requireFeature('ai_insights'),
   asyncHandler(async (req, res) => {
     const body = z.object({
       patientId: z.string().cuid(),

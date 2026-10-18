@@ -99,6 +99,23 @@ async function main() {
     }
   }
   console.log('Seed complete: permissions, teams, demo users (password: Neurocare123)');
+
+  // Default feature flags (dynamic config — can be toggled at runtime via /api/v1/config/admin)
+  const defaultFlags = [
+    { key: 'ai_insights', name: 'AI Insights', description: 'AI-generated clinical insights, letters and safety checks', enabled: true, rolloutPct: 100, conditions: {} },
+    { key: 'video_calls', name: 'Video Consultations', description: 'Video call integration for remote appointments', enabled: true, rolloutPct: 100, conditions: {} },
+    { key: 'shared_care_letters', name: 'Shared Care Letters', description: 'Generate GP shared-care letters', enabled: true, rolloutPct: 100, conditions: {} },
+    { key: 'patient_self_book', name: 'Patient Self-Booking', description: 'Allow patients to book their own appointments', enabled: false, rolloutPct: 0, conditions: {} },
+    { key: 'advanced_analytics', name: 'Advanced Analytics', description: 'Finance and clinician analytics dashboards', enabled: false, rolloutPct: 50, conditions: {} },
+  ];
+  for (const flag of defaultFlags) {
+    await prisma.featureFlag.upsert({
+      where: { key: flag.key },
+      create: flag,
+      update: { name: flag.name, description: flag.description, enabled: flag.enabled, rolloutPct: flag.rolloutPct },
+    });
+  }
+  console.log('Seed complete: feature flags');
 }
 
 main().finally(() => prisma.$disconnect());
