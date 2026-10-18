@@ -19,6 +19,9 @@ import clinicianRoutes from '../modules/clinician/clinician.routes.js';
 import clinicalFormsRoutes from '../modules/clinical-forms/clinical-forms.routes.js';
 import clinicalRiskRoutes from '../modules/clinical-risk/clinical-risk.routes.js';
 import saasRoutes from '../modules/saas/saas.routes.js';
+import liveDataRoutes from '../modules/live-data/live-data.routes.js';
+import onboardingRoutes from '../modules/onboarding/onboarding.routes.js';
+import reportLifecycleRoutes from '../modules/reports/report-lifecycle.routes.js';
 
 const router = Router();
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'neurocare-backend', timestamp: new Date().toISOString() }));
@@ -42,4 +45,7 @@ router.use('/clinician', clinicianRoutes);
 router.use('/clinical-forms', clinicalFormsRoutes);
 router.use('/clinical-risk', clinicalRiskRoutes);
 router.use('/saas', saasRoutes);
+router.use('/live-data', liveDataRoutes);
+router.use('/onboarding', onboardingRoutes);
+router.use('/reports/lifecycle', reportLifecycleRoutes);
 export default router;

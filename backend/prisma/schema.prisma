@@ -254,6 +254,15 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum OnboardingStage {
+  NOT_STARTED
+  IDENTITY_VERIFIED
+  DEMOGRAPHICS_COMPLETE
+  CONTACT_COMPLETE
+  MEDICAL_HISTORY_COMPLETE
+  COMPLETED
+}
+
 enum FeedbackType {
   RATING
   FFT
@@ -568,56 +577,64 @@ model CoverArrangement {
 }
 
 model User {
-  id                       String                   @id @default(cuid())
-  email                    String                   @unique
-  passwordHash             String
-  firstName                String
-  lastName                 String
-  phone                    String?
-  status                   UserStatus               @default(ACTIVE)
-  roles                    Role[]
-  roleAssignments          UserRole[]
-  emailVerifiedAt          DateTime?
-  mfaEnabled               Boolean                  @default(false)
-  mfaFactors               MfaFactor[]
-  sessions                 UserSession[]
-  refreshTokens            RefreshToken[]
-  passwordResets           PasswordResetToken[]
-  emailVerifications       EmailVerificationToken[]
-  mfaChallenges            MfaChallenge[]
-  devices                  Device[]
-  loginHistory             LoginHistory[]
-  securityAlerts           SecurityAlert[]
-  patient                  Patient?
-  clinician                Clinician?
-  sentMessages             Message[]                @relation("MessageSender")
-  notifications            Notification[]
-  auditEvents              AuditEvent[]             @relation("AuditActor")
-  assignedTasks            ClinicalTask[]           @relation("TaskAssignee")
-  noteVersions             ClinicalNoteVersion[]    @relation("NoteVersionAuthor")
-  uploadedVersions         DocumentVersion[]        @relation("DocumentVersionUploader")
-  documentAccesses         DocumentAccessLog[]      @relation("DocumentAccessActor")
-  reviewedAiDocs           AiGeneratedDocument[]    @relation("AiReviewer")
-  reportVersions           ReportVersion[]          @relation("ReportVersionAuthor")
-  reportAudits             ReportAuditEvent[]       @relation("ReportAuditActor")
-  assignedComplaints       Complaint[]              @relation("ComplaintAssignee")
-  teamMemberships          TeamMember[]
-  patientAssignments       PatientAssignment[]      @relation("AssignmentUser")
-  grantedAssignments       PatientAssignment[]      @relation("AssignmentGrantor")
-  originalCover            CoverArrangement[]       @relation("OriginalClinicianCover")
-  coveringPatients         CoverArrangement[]       @relation("CoverClinician")
-  workflowActions          WorkflowTransition[]     @relation("WorkflowActor")
-  queueAssignments         TeamQueueItem[]          @relation("QueueAssignee")
-  formDefinitions          ClinicalFormDefinition[] @relation("FormDefinitionAuthor")
-  formSubmissions          ClinicalFormSubmission[] @relation("FormSubmissionAuthor")
-  riskScoresAuthored       ClinicalRiskScore[]      @relation("RiskScoreAuthor")
-  rankingsReviewed         PatientRanking[]         @relation("RankingReviewer")
-  safetyAlertsAuthored     MedicationSafetyAlert[]  @relation("SafetyAlertAuthor")
-  safetyAlertsAcknowledged MedicationSafetyAlert[]  @relation("SafetyAlertAcknowledger")
-  aiTemplates              AiTemplate[]             @relation("AiTemplateAuthor")
-  orgMemberships           OrganizationMember[]     @relation("OrganizationMember")
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
+  id                         String                   @id @default(cuid())
+  email                      String                   @unique
+  passwordHash               String
+  firstName                  String
+  lastName                   String
+  phone                      String?
+  status                     UserStatus               @default(ACTIVE)
+  roles                      Role[]
+  roleAssignments            UserRole[]
+  emailVerifiedAt            DateTime?
+  mfaEnabled                 Boolean                  @default(false)
+  mfaFactors                 MfaFactor[]
+  sessions                   UserSession[]
+  refreshTokens              RefreshToken[]
+  passwordResets             PasswordResetToken[]
+  emailVerifications         EmailVerificationToken[]
+  mfaChallenges              MfaChallenge[]
+  devices                    Device[]
+  loginHistory               LoginHistory[]
+  securityAlerts             SecurityAlert[]
+  patient                    Patient?
+  clinician                  Clinician?
+  sentMessages               Message[]                @relation("MessageSender")
+  notifications              Notification[]
+  auditEvents                AuditEvent[]             @relation("AuditActor")
+  assignedTasks              ClinicalTask[]           @relation("TaskAssignee")
+  noteVersions               ClinicalNoteVersion[]    @relation("NoteVersionAuthor")
+  uploadedVersions           DocumentVersion[]        @relation("DocumentVersionUploader")
+  documentAccesses           DocumentAccessLog[]      @relation("DocumentAccessActor")
+  reviewedAiDocs             AiGeneratedDocument[]    @relation("AiReviewer")
+  reportVersions             ReportVersion[]          @relation("ReportVersionAuthor")
+  reportAudits               ReportAuditEvent[]       @relation("ReportAuditActor")
+  assignedComplaints         Complaint[]              @relation("ComplaintAssignee")
+  teamMemberships            TeamMember[]
+  patientAssignments         PatientAssignment[]      @relation("AssignmentUser")
+  grantedAssignments         PatientAssignment[]      @relation("AssignmentGrantor")
+  originalCover              CoverArrangement[]       @relation("OriginalClinicianCover")
+  coveringPatients           CoverArrangement[]       @relation("CoverClinician")
+  workflowActions            WorkflowTransition[]     @relation("WorkflowActor")
+  queueAssignments           TeamQueueItem[]          @relation("QueueAssignee")
+  formDefinitions            ClinicalFormDefinition[] @relation("FormDefinitionAuthor")
+  formSubmissions            ClinicalFormSubmission[] @relation("FormSubmissionAuthor")
+  riskScoresAuthored         ClinicalRiskScore[]      @relation("RiskScoreAuthor")
+  rankingsReviewed           PatientRanking[]         @relation("RankingReviewer")
+  safetyAlertsAuthored       MedicationSafetyAlert[]  @relation("SafetyAlertAuthor")
+  safetyAlertsAcknowledged   MedicationSafetyAlert[]  @relation("SafetyAlertAcknowledger")
+  clinicalAlertsAcknowledged ClinicalAlert[]          @relation("ClinicalAlertAcknowledger")
+  aiTemplates                AiTemplate[]             @relation("AiTemplateAuthor")
+  orgMemberships             OrganizationMember[]     @relation("OrganizationMember")
+  reportSignatures           ReportSignature[]
+  reportSharesSent           ReportShare[]            @relation("ReportShareSender")
+  reportSharesReceived       ReportShare[]            @relation("ReportShareRecipient")
+  reportAccesses             ReportAccess[]
+  reportSignaturesRevoked    ReportSignature[]       @relation("ReportSignatureRevoker")
+  reportNextStepsAsClinician ReportNextStep[]        @relation("ReportNextStepClinician")
+  reportNextStepsCreated     ReportNextStep[]        @relation("ReportNextStepCreator")
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
 }
 
 model MfaFactor {
@@ -794,7 +811,18 @@ model Patient {
   riskScores           ClinicalRiskScore[]
   rankings             PatientRanking[]
   safetyAlerts         MedicationSafetyAlert[]
-  aiInsights           AiInsight[] @relation("AiInsightPatient")
+  aiInsights           AiInsight[]              @relation("AiInsightPatient")
+  vitalSigns           PatientVitalSigns[]
+  symptomEntries       PatientSymptomEntry[]
+  adherenceLogs        MedicationAdherenceLog[]
+  wearableDevices      WearableDevice[]
+  wearableDataPoints   WearableDataPoint[]
+  clinicalAlerts       ClinicalAlert[]
+  liveDataEvents       LiveDataStreamEvent[]
+  reportShares         ReportShare[]
+  reportAccesses       ReportAccess[]
+  reportNextSteps      ReportNextStep[]
+  onboardingStage      OnboardingStage          @default(NOT_STARTED)
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
 }
@@ -1376,7 +1404,7 @@ model AiRun {
   completedAt        DateTime?
   aiSession          AiSession             @relation(fields: [aiSessionId], references: [id], onDelete: Cascade)
   generatedDocuments AiGeneratedDocument[]
-  insights           AiInsight[] @relation("AiInsightSourceRun")
+  insights           AiInsight[]           @relation("AiInsightSourceRun")
   createdAt          DateTime              @default(now())
 
   @@index([aiSessionId, type, createdAt])
@@ -1448,6 +1476,10 @@ model Report {
   versions       ReportVersion[]
   aiOutputs      AiOutput[]
   auditEvents    ReportAuditEvent[]
+  signatures     ReportSignature[]
+  shares         ReportShare[]
+  accesses       ReportAccess[]
+  nextSteps      ReportNextStep[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -1498,6 +1530,154 @@ model ReportAuditEvent {
   actor     User?    @relation("ReportAuditActor", fields: [actorId], references: [id])
 
   @@index([reportId, createdAt])
+}
+
+enum ReportSignatureMethod {
+  DIGITAL
+  BIOMETRIC
+  SMART_CARD
+  TOTP_VERIFIED
+}
+
+enum ReportSignatureStatus {
+  PENDING
+  SIGNED
+  REVOKED
+  EXPIRED
+}
+
+enum ReportSharePurpose {
+  PATIENT_VIEW
+  CLINICIAN_REVIEW
+  GP_SHARED_CARE
+  SCHOOL_REFERRAL
+  EMPLOYER_ADJUSTMENT
+  LEGAL_REQUEST
+  RESEARCH_ANONYMISED
+}
+
+enum ReportShareStatus {
+  PENDING
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum NextStepType {
+  FOLLOW_UP_APPOINTMENT
+  MEDICATION_REVIEW
+  TITRATION_ADJUSTMENT
+  REFERRAL
+  SHARED_CARE_SETUP
+  PHYSICAL_HEALTH_CHECK
+  PSYCHOLOGICAL_INTERVENTION
+  DISCHARGE
+  CRISIS_INTERVENTION
+}
+
+enum NextStepStatus {
+  PROPOSED
+  AGREED
+  SCHEDULED
+  COMPLETED
+  DECLINED
+  OVERDUE
+}
+
+model ReportSignature {
+  id             String                  @id @default(cuid())
+  reportId       String
+  report         Report                  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  signerId       String
+  signer         User                    @relation(fields: [signerId], references: [id])
+  method         ReportSignatureMethod   @default(DIGITAL)
+  status         ReportSignatureStatus   @default(PENDING)
+  signatureHash  String?                 @unique
+  signedAt       DateTime?
+  ipAddress      String?
+  userAgent      String?
+  mfaVerified    Boolean                 @default(false)
+  revokedAt      DateTime?
+  revokedById    String?
+  revokedBy      User?                   @relation("ReportSignatureRevoker", fields: [revokedById], references: [id])
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([reportId, status])
+  @@index([signerId, status])
+  @@index([signatureHash])
+  @@unique([reportId, signerId])
+}
+
+model ReportShare {
+  id             String                  @id @default(cuid())
+  reportId       String
+  report         Report                  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient                 @relation(fields: [patientId], references: [id])
+  sharedById     String
+  sharedBy       User                    @relation("ReportShareSender", fields: [sharedById], references: [id])
+  sharedWithId   String?
+  sharedWith     User?                   @relation("ReportShareRecipient", fields: [sharedWithId], references: [id])
+  purpose        ReportSharePurpose
+  status         ReportShareStatus       @default(PENDING)
+  accessToken    String?                 @unique
+  accessExpiresAt DateTime?
+  accessedAt     DateTime?
+  accessCount    Int                     @default(0)
+  message        String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([reportId, status])
+  @@index([patientId, status])
+  @@index([accessToken])
+  @@index([sharedById, createdAt])
+}
+
+model ReportAccess {
+  id          String   @id @default(cuid())
+  reportId    String
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  accessedById String
+  accessedBy  User     @relation(fields: [accessedById], references: [id])
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  action      String   // VIEW, DOWNLOAD, PRINT, SHARE
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([accessedById, createdAt])
+  @@index([patientId, createdAt])
+}
+
+model ReportNextStep {
+  id          String   @id @default(cuid())
+  reportId    String
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  type        NextStepType
+  status      NextStepStatus @default(PROPOSED)
+  title       String
+  description String?
+  scheduledAt DateTime?
+  completedAt DateTime?
+  clinicianId String?
+  clinician   User?    @relation("ReportNextStepClinician", fields: [clinicianId], references: [id])
+  createdById String
+  createdBy   User     @relation("ReportNextStepCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reportId, status])
+  @@index([patientId, status])
+  @@index([type, status])
+  @@index([scheduledAt])
 }
 
 model MessageThread {
@@ -1914,19 +2094,19 @@ enum AiInsightType {
 }
 
 model AiInsight {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   patientId   String
-  patient     Patient  @relation("AiInsightPatient", fields: [patientId], references: [id])
+  patient     Patient       @relation("AiInsightPatient", fields: [patientId], references: [id])
   type        AiInsightType
   title       String
   content     String
   confidence  Int
   severity    AuditSeverity @default(INFO)
   sourceRunId String?
-  sourceRun   AiRun?   @relation("AiInsightSourceRun", fields: [sourceRunId], references: [id])
-  dismissed   Boolean  @default(false)
+  sourceRun   AiRun?        @relation("AiInsightSourceRun", fields: [sourceRunId], references: [id])
+  dismissed   Boolean       @default(false)
   dismissedAt DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime      @default(now())
 
   @@index([patientId, type, dismissed])
   @@index([patientId, createdAt])
@@ -1942,17 +2122,17 @@ enum AiTemplateType {
 }
 
 model AiTemplate {
-  id          String   @id @default(cuid())
-  key         String   @unique
+  id          String         @id @default(cuid())
+  key         String         @unique
   name        String
   type        AiTemplateType
   content     String
   variables   Json
-  active    Boolean  @default(true)
+  active      Boolean        @default(true)
   createdById String?
-  createdBy   User?    @relation("AiTemplateAuthor", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdBy   User?          @relation("AiTemplateAuthor", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([key, active])
   @@index([type])
@@ -1970,19 +2150,19 @@ enum BillingInterval {
 }
 
 model SubscriptionPlan {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  name        String
-  tier        SubscriptionTier
-  description String?
-  pricePence  Int
-  interval    BillingInterval
-  features    Json
-  limits      Json
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  organizations Organization[] @relation("SubscriptionPlanOrganizations")
+  id                   String                @id @default(cuid())
+  key                  String                @unique
+  name                 String
+  tier                 SubscriptionTier
+  description          String?
+  pricePence           Int
+  interval             BillingInterval
+  features             Json
+  limits               Json
+  active               Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  organizations        Organization[]        @relation("SubscriptionPlanOrganizations")
   subscriptionInvoices SubscriptionInvoice[] @relation("SubscriptionPlanInvoices")
 
   @@index([key, active])
@@ -1990,68 +2170,68 @@ model SubscriptionPlan {
 }
 
 model Organization {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  name        String
-  tier        SubscriptionTier @default(STARTER)
-  planId      String?
-  plan        SubscriptionPlan? @relation("SubscriptionPlanOrganizations", fields: [planId], references: [id])
-  stripeCustomerId String?
+  id                   String                @id @default(cuid())
+  key                  String                @unique
+  name                 String
+  tier                 SubscriptionTier      @default(STARTER)
+  planId               String?
+  plan                 SubscriptionPlan?     @relation("SubscriptionPlanOrganizations", fields: [planId], references: [id])
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  branding    Json
-  settings    Json
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  members     OrganizationMember[]
-  usageMeters UsageMeter[]
-  apiKeys     ApiKey[]
+  branding             Json
+  settings             Json
+  active               Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  members              OrganizationMember[]
+  usageMeters          UsageMeter[]
+  apiKeys              ApiKey[]
   subscriptionInvoices SubscriptionInvoice[]
-  trialRecords TrialRecord[]
+  trialRecords         TrialRecord[]
 
   @@index([key, active])
 }
 
 model OrganizationMember {
-  id        String   @id @default(cuid())
-  orgId     String
-  org       Organization @relation(fields: [orgId], references: [id])
-  userId    String
-  user      User     @relation("OrganizationMember", fields: [userId], references: [id])
-  role      String   @default("MEMBER")
-  joinedAt  DateTime @default(now())
+  id       String       @id @default(cuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id])
+  userId   String
+  user     User         @relation("OrganizationMember", fields: [userId], references: [id])
+  role     String       @default("MEMBER")
+  joinedAt DateTime     @default(now())
 
   @@unique([orgId, userId])
 }
 
 model UsageMeter {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   orgId     String
   org       Organization @relation(fields: [orgId], references: [id])
   metric    String
   period    String
-  count     Int      @default(0)
+  count     Int          @default(0)
   limit     Int?
   resetAt   DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@unique([orgId, metric, period])
   @@index([orgId, resetAt])
 }
 
 model ApiKey {
-  id          String   @id @default(cuid())
-  orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
-  name        String
-  keyHash     String   @unique
-  prefix      String   @unique
-  scopes      Json
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id         String       @id @default(cuid())
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id])
+  name       String
+  keyHash    String       @unique
+  prefix     String       @unique
+  scopes     Json
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
 
   @@index([orgId, active])
 }
@@ -2071,31 +2251,181 @@ model FeatureFlag {
 }
 
 model SubscriptionInvoice {
-  id          String   @id @default(cuid())
-  orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
-  planId      String
-  plan        SubscriptionPlan @relation("SubscriptionPlanInvoices", fields: [planId], references: [id])
-  amountPence Int
-  status      String
-  stripeInvoiceId String? @unique
-  dueAt       DateTime
-  paidAt      DateTime?
-  createdAt   DateTime @default(now())
+  id              String           @id @default(cuid())
+  orgId           String
+  org             Organization     @relation(fields: [orgId], references: [id])
+  planId          String
+  plan            SubscriptionPlan @relation("SubscriptionPlanInvoices", fields: [planId], references: [id])
+  amountPence     Int
+  status          String
+  stripeInvoiceId String?          @unique
+  dueAt           DateTime
+  paidAt          DateTime?
+  createdAt       DateTime         @default(now())
 
   @@index([orgId, status])
   @@index([dueAt])
 }
 
 model TrialRecord {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
+  org         Organization     @relation(fields: [orgId], references: [id])
   tier        SubscriptionTier
   startedAt   DateTime
   endsAt      DateTime
-  converted   Boolean  @default(false)
+  converted   Boolean          @default(false)
   convertedAt DateTime?
 
   @@index([orgId])
+}
+
+enum VitalType {
+  HEART_RATE
+  BLOOD_PRESSURE_SYSTOLIC
+  BLOOD_PRESSURE_DIASTOLIC
+  TEMPERATURE
+  OXYGEN_SATURATION
+  RESPIRATORY_RATE
+  WEIGHT
+  SLEEP_HOURS
+}
+
+enum SymptomSeverity {
+  NONE
+  MILD
+  MODERATE
+  SEVERE
+  CRITICAL
+}
+
+enum AdherenceStatus {
+  TAKEN
+  MISSED
+  LATE
+  REFUSED
+}
+
+model PatientVitalSigns {
+  id           String    @id @default(cuid())
+  patientId    String
+  patient      Patient   @relation(fields: [patientId], references: [id])
+  type         VitalType
+  value        Float
+  unit         String
+  recordedAt   DateTime  @default(now())
+  source       String    @default("manual") // manual, wearable, api
+  deviceId     String?
+  notes        String?
+  isAnomalous  Boolean   @default(false)
+  anomalyScore Float?
+  createdAt    DateTime  @default(now())
+
+  @@index([patientId, type, recordedAt])
+  @@index([patientId, recordedAt])
+  @@index([isAnomalous, recordedAt])
+}
+
+model PatientSymptomEntry {
+  id             String          @id @default(cuid())
+  patientId      String
+  patient        Patient         @relation(fields: [patientId], references: [id])
+  symptom        String
+  severity       SymptomSeverity @default(MILD)
+  notes          String?
+  recordedAt     DateTime        @default(now())
+  source         String          @default("patient") // patient, clinician, wearable
+  triggeredAlert Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+
+  @@index([patientId, recordedAt])
+  @@index([patientId, severity])
+  @@index([triggeredAlert, recordedAt])
+}
+
+model MedicationAdherenceLog {
+  id          String          @id @default(cuid())
+  patientId   String
+  patient     Patient         @relation(fields: [patientId], references: [id])
+  medication  String
+  dose        String?
+  status      AdherenceStatus @default(TAKEN)
+  takenAt     DateTime?
+  scheduledAt DateTime?
+  notes       String?
+  sideEffects String?
+  createdAt   DateTime        @default(now())
+
+  @@index([patientId, createdAt])
+  @@index([patientId, status])
+  @@index([medication, createdAt])
+}
+
+model WearableDevice {
+  id                 String              @id @default(cuid())
+  patientId          String
+  patient            Patient             @relation(fields: [patientId], references: [id])
+  deviceType         String // fitbit, apple_watch, garmin, etc.
+  deviceId           String              @unique
+  isActive           Boolean             @default(true)
+  lastSyncAt         DateTime?
+  createdAt          DateTime            @default(now())
+  wearableDataPoints WearableDataPoint[]
+
+  @@index([patientId, isActive])
+  @@index([deviceId])
+}
+
+model WearableDataPoint {
+  id         String         @id @default(cuid())
+  deviceId   String
+  device     WearableDevice @relation(fields: [deviceId], references: [deviceId])
+  patientId  String
+  patient    Patient        @relation(fields: [patientId], references: [id])
+  dataType   String // heart_rate, steps, sleep, etc.
+  value      Float
+  unit       String?
+  recordedAt DateTime
+  createdAt  DateTime       @default(now())
+
+  @@index([deviceId, recordedAt])
+  @@index([patientId, dataType, recordedAt])
+}
+
+model ClinicalAlert {
+  id               String        @id @default(cuid())
+  patientId        String
+  patient          Patient       @relation(fields: [patientId], references: [id])
+  alertType        String // VITAL_ANOMALY, MEDICATION_MISSED, SYMPTOM_ESCALATION, RISK_INCREASE
+  severity         AuditSeverity @default(WARNING)
+  title            String
+  message          String
+  triggerData      Json // the live data that triggered this alert
+  acknowledged     Boolean       @default(false)
+  acknowledgedAt   DateTime?
+  acknowledgedById String?
+  acknowledgedBy   User?         @relation("ClinicalAlertAcknowledger", fields: [acknowledgedById], references: [id])
+  resolvedAt       DateTime?
+  resolutionNote   String?
+  createdAt        DateTime      @default(now())
+
+  @@index([patientId, acknowledged, createdAt])
+  @@index([severity, createdAt])
+  @@index([alertType, createdAt])
+}
+
+model LiveDataStreamEvent {
+  id          String    @id @default(cuid())
+  patientId   String?
+  eventType   String // VITAL_UPDATE, SYMPTOM_LOG, MEDICATION_ADHERENCE, WEARABLE_SYNC, ALERT_TRIGGERED
+  source      String // wearable, patient_app, clinician_portal, api
+  payload     Json
+  processed   Boolean   @default(false)
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  patient     Patient?  @relation(fields: [patientId], references: [id])
+
+  @@index([patientId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([processed, createdAt])
 }
