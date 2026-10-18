@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { isFeatureEnabled, clearFlagsCache } from "@/lib/dynamic-config";
+import { isFeatureEnabled, isFeatureEnabledBool, clearFlagsCache } from "@/lib/dynamic-config";
 
 interface FeatureGateProps {
   feature: string;
@@ -20,12 +20,12 @@ export default function FeatureGate({
   children,
   fallback = null,
 }: FeatureGateProps) {
-  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [result, setResult] = useState<{ enabled: boolean; reason?: string } | null>(null);
 
   useEffect(() => {
     let active = true;
-    isFeatureEnabled(feature).then((v: boolean) => {
-      if (active) setEnabled(v);
+    isFeatureEnabled(feature).then((v) => {
+      if (active) setResult(v);
     });
     return () => {
       active = false;
@@ -33,10 +33,10 @@ export default function FeatureGate({
   }, [feature]);
 
   // While loading, render fallback so the UI doesn't flicker content that may be gated
-  if (enabled === null) return <>{fallback}</>;
-  if (!enabled) return <>{fallback}</>;
+  if (!result) return <>{fallback}</>;
+  if (!result.enabled) return <>{fallback}</>;
   return <>{children}</>;
 }
 
 /** Programmatically check a flag (for use in event handlers, effects, etc.) */
-export { isFeatureEnabled, clearFlagsCache };
+export { isFeatureEnabled, isFeatureEnabledBool, clearFlagsCache };

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { authenticatedFetch } from "../lib/client-api";
 import { PortalExperience } from "./portal-experience";
+import NotificationBell from "./NotificationBell";
 
 export const portalConfig = {
   patient: {
@@ -381,6 +382,7 @@ export function PlatformShell({ portal }: { portal: Portal }) {
             >
               Open actions
             </Link>
+            <NotificationBell />
           </div>
         </header>
 
