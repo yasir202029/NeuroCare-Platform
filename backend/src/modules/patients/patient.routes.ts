@@ -12,6 +12,47 @@ import { notFound } from "../../shared/errors.js";
 
 const router = Router();
 router.use(requireAuth);
+
+/** Paginated patient directory (clinical staff only). Patients may only fetch their own via /me. */
+router.get(
+  "/",
+  requireRole(...clinicalStaffRoles),
+  asyncHandler(async (req, res) => {
+    const query = z
+      .object({
+        take: z.coerce.number().int().min(1).max(200).default(50),
+        skip: z.coerce.number().int().min(0).default(0),
+        search: z.string().max(200).optional(),
+      })
+      .parse(req.query);
+
+    const where = query.search
+      ? {
+          OR: [
+            { user: { email: { contains: query.search, mode: "insensitive" as const } } },
+            { user: { firstName: { contains: query.search, mode: "insensitive" as const } } },
+            { user: { lastName: { contains: query.search, mode: "insensitive" as const } } },
+          ],
+        }
+      : {};
+
+    const [patients, total] = await Promise.all([
+      prisma.patient.findMany({
+        where,
+        include: {
+          user: { select: { id: true, email: true, firstName: true, lastName: true } },
+        },
+        orderBy: [{ createdAt: "desc" }],
+        take: query.take,
+        skip: query.skip,
+      }),
+      prisma.patient.count({ where }),
+    ]);
+
+    res.json({ patients, total, take: query.take, skip: query.skip });
+  }),
+);
+
 const profile = z.object({
   nhsNumber: z
     .string()
