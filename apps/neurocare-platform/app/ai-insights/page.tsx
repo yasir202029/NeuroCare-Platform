@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { authenticatedFetch } from "../../lib/client-api";
+import FeatureGate from "@/components/FeatureGate";
 
 
 
@@ -123,8 +124,23 @@ export default function AiInsightsPage() {
     }
   }
 
+  function FeatureDisabled() {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
+          AI Insights disabled
+        </h2>
+        <p style={{ fontSize: 14, marginBottom: 16 }}>
+          The AI Insights feature is currently disabled by an administrator. Enable
+          the "ai_insights" feature flag at /admin to restore it.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div
+    <FeatureGate feature="ai_insights" fallback={<FeatureDisabled />}>
+      <div
       style={{
         minHeight: "100vh",
         background: "#f1f5f9",
@@ -365,5 +381,6 @@ export default function AiInsightsPage() {
         )}
       </section>
     </div>
+    </FeatureGate>
   );
 }

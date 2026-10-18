@@ -26,6 +26,7 @@ import gpCommunicationRoutes from '../modules/gp-communication/gp-communication.
 import hookRoutes from '../modules/hooks/hook.routes.js';
 import railRoutes from '../modules/rails/rail.routes.js';
 import coordinationRoutes from '../modules/coordination/coordination.routes.js';
+import configRoutes from '../modules/config/config.routes.js';
 
 const router = Router();
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'neurocare-backend', timestamp: new Date().toISOString() }));
@@ -56,4 +57,5 @@ router.use('/gp-communication', gpCommunicationRoutes);
 router.use('/hooks', hookRoutes);
 router.use('/rails', railRoutes);
 router.use('/coordination', coordinationRoutes);
+router.use('/config', configRoutes);
 export default router;
