@@ -36,6 +36,11 @@ const schema = z.object({
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   SMS_PROVIDER: z.string().default('log'),
+  RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),
+  RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+  RATE_LIMIT_API_MAX: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(5),
+  RATE_LIMIT_WRITE_MAX: z.coerce.number().int().positive().default(30),
 });
 
 export const config = schema.parse(process.env);
