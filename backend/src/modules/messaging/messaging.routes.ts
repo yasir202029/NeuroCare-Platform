@@ -19,11 +19,18 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(await prisma.messageThread.findMany({ where: { patientId }, include: { messages: { orderBy: { createdAt: 'asc' } } }, orderBy: { updatedAt: 'desc' } }));
 }));
 router.post('/', audit('MESSAGE_CREATED', 'Message'), asyncHandler(async (req, res) => {
-  const body = z.object({ patientId: z.string().cuid().optional(), threadId: z.string().cuid().optional(), channel: z.nativeEnum(MessageChannel).default(MessageChannel.IN_APP), subject: z.string().max(200).optional(), body: z.string().min(1).max(10000) }).refine((value) => value.patientId || value.threadId, 'A patient or message thread is required').parse(req.body);
+  const body = z.object({ patientId: z.string().cuid().optional(), threadId: z.string().cuid().optional(), channel: z.nativeEnum(MessageChannel).default(MessageChannel.IN_APP), subject: z.string().max(200).optional(), body: z.string().min(1).max(10000) }).parse(req.body);
+  // Patients may omit patientId — resolve their own profile automatically.
+  let patientId = body.patientId;
+  if (!patientId && !body.threadId && req.user!.roles.includes(Role.PATIENT)) {
+    const ownPatient = await prisma.patient.findUnique({ where: { userId: req.user!.id }, select: { id: true } });
+    if (!ownPatient) throw notFound('Patient profile not found');
+    patientId = ownPatient.id;
+  }
   let thread = body.threadId ? await prisma.messageThread.findUnique({ where: { id: body.threadId } }) : null;
   if (!thread) {
-    if (!body.patientId) throw notFound('Message thread not found');
-    thread = await prisma.messageThread.create({ data: { patientId: body.patientId, subject: body.subject } });
+    if (!patientId) throw notFound('Message thread not found');
+    thread = await prisma.messageThread.create({ data: { patientId, subject: body.subject } });
   }
   await assertPatientAccess(req.user!.id, req.user!.roles, thread.patientId);
   const message = await prisma.message.create({ data: { threadId: thread.id, senderId: req.user!.id, channel: body.channel, body: body.body, status: 'QUEUED' } });
