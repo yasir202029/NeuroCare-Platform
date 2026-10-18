@@ -633,6 +633,13 @@ model User {
   reportSignaturesRevoked    ReportSignature[]       @relation("ReportSignatureRevoker")
   reportNextStepsAsClinician ReportNextStep[]        @relation("ReportNextStepClinician")
   reportNextStepsCreated     ReportNextStep[]        @relation("ReportNextStepCreator")
+  gpCommunicationsSent       GpCommunication[]       @relation("GpCommunicationSender")
+  gpRecordUpdatesApplied     GpRecordUpdate[]       @relation("GpRecordUpdateApplier")
+  gpRecordUpdatesReviewed    GpRecordUpdate[]       @relation("GpRecordUpdateReviewer")
+  hooksCreated               Hook[]
+  railsCreated               Rail[]
+  railViolationsActed        RailViolation[]       @relation("RailViolationActor")
+  railViolationsResolved     RailViolation[]       @relation("RailViolationResolver")
   createdAt                  DateTime                 @default(now())
   updatedAt                  DateTime                 @updatedAt
 }
@@ -822,6 +829,9 @@ model Patient {
   reportShares         ReportShare[]
   reportAccesses       ReportAccess[]
   reportNextSteps      ReportNextStep[]
+  gpCommunications     GpCommunication[]
+  gpRecordUpdates      GpRecordUpdate[]
+  railViolations       RailViolation[]
   onboardingStage      OnboardingStage          @default(NOT_STARTED)
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
@@ -1012,6 +1022,7 @@ model Assessment {
   documents       Document[]
   aiDocuments     AiGeneratedDocument[]
   reports         Report[]
+  gpCommunications GpCommunication[]
   createdAt       DateTime                  @default(now())
   updatedAt       DateTime                  @updatedAt
 
@@ -1128,6 +1139,7 @@ model SharedCareAgreement {
   patient     Patient   @relation(fields: [patientId], references: [id])
   clinician   Clinician @relation(fields: [clinicianId], references: [id])
   document    Document? @relation(fields: [documentId], references: [id])
+  gpCommunications GpCommunication[]
   createdAt   DateTime  @default(now())
 }
 
@@ -1269,6 +1281,7 @@ model Prescription {
   document          Document?                 @relation("PrescriptionDocument")
   statusEvents      PrescriptionStatusEvent[]
   shipments         CourierShipment[]
+  gpCommunications  GpCommunication[]
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
 
@@ -2428,4 +2441,244 @@ model LiveDataStreamEvent {
   @@index([patientId, createdAt])
   @@index([eventType, createdAt])
   @@index([processed, createdAt])
+}
+
+enum GpCommunicationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  ACKNOWLEDGED
+  REJECTED
+  FAILED
+}
+
+enum GpRecordUpdateType {
+  MEDICATION_CHANGE
+  DIAGNOSIS_UPDATE
+  ALLERGY_UPDATE
+  VITAL_UPDATE
+  REFERRAL
+  DISCHARGE_SUMMARY
+  OTHER
+}
+
+enum GpRecordUpdateStatus {
+  PENDING
+  APPLIED
+  REJECTED
+  REQUIRES_REVIEW
+}
+
+enum HookEvent {
+  PATIENT_CREATED
+  PATIENT_UPDATED
+  ASSESSMENT_COMPLETED
+  MEDICATION_PRESCRIBED
+  TITRATION_ADJUSTED
+  RISK_SCORE_CALCULATED
+  SAFETY_ALERT_TRIGGERED
+  CLINICAL_ALERT_ACKNOWLEDGED
+  GP_COMMUNICATION_SENT
+  GP_RECORD_UPDATED
+  REPORT_SIGNED
+  REPORT_SHARED
+  ONBOARDING_COMPLETED
+  LIVE_DATA_INGESTED
+}
+
+enum HookStatus {
+  ACTIVE
+  INACTIVE
+  DISABLED
+}
+
+enum RailSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum RailAction {
+  BLOCK
+  WARN
+  LOG
+  REQUIRE_APPROVAL
+}
+
+enum RailScope {
+  GLOBAL
+  ROLE
+  PATIENT
+  ORGANIZATION
+}
+
+model GpCommunication {
+  id              String              @id @default(cuid())
+  patientId       String
+  patient         Patient             @relation(fields: [patientId], references: [id])
+  clinicianId     String?
+  clinician       User?               @relation("GpCommunicationSender", fields: [clinicianId], references: [id])
+  assessmentId    String?
+  assessment      Assessment?         @relation(fields: [assessmentId], references: [id])
+  prescriptionId  String?
+  prescription    Prescription?       @relation(fields: [prescriptionId], references: [id])
+  gpName          String
+  gpPractice      String
+  gpEmail         String?
+  gpNhsNumber     String?
+  communicationType String          // ASSESSMENT, MEDICATION, SHARED_CARE, DISCHARGE, CONSULTATION
+  status          GpCommunicationStatus @default(PENDING)
+  subject         String
+  content         String
+  sharedCareAgreementId String?
+  sharedCareAgreement SharedCareAgreement? @relation(fields: [sharedCareAgreementId], references: [id])
+  deliveredAt     DateTime?
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+  failureReason   String?
+  sentAt          DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  gpRecordUpdates GpRecordUpdate[]
+
+  @@index([patientId, status, createdAt])
+  @@index([clinicianId, createdAt])
+  @@index([communicationType, status])
+  @@index([gpNhsNumber])
+}
+
+model GpRecordUpdate {
+  id              String              @id @default(cuid())
+  patientId       String
+  patient         Patient             @relation(fields: [patientId], references: [id])
+  gpCommunicationId String?
+  gpCommunication GpCommunication?  @relation(fields: [gpCommunicationId], references: [id])
+  gpName          String
+  gpPractice      String
+  gpNhsNumber     String?
+  updateType      GpRecordUpdateType
+  status          GpRecordUpdateStatus @default(PENDING)
+  title           String
+  description     String
+  clinicalData    Json              // the data GP wants to update
+  currentValue    Json?
+  newValue        Json?
+  appliedById     String?
+  appliedBy       User?             @relation("GpRecordUpdateApplier", fields: [appliedById], references: [id])
+  appliedAt       DateTime?
+  reviewedById    String?
+  reviewedBy      User?             @relation("GpRecordUpdateReviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  rejectionReason String?
+  requiresClinicianApproval Boolean   @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([patientId, status, createdAt])
+  @@index([updateType, status])
+  @@index([gpNhsNumber])
+  @@index([requiresClinicianApproval, status])
+}
+
+model Hook {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  event         HookEvent
+  status        HookStatus @default(ACTIVE)
+  targetUrl     String?   // webhook URL for external hooks
+  secret        String?   // signing secret for webhook
+  isInternal    Boolean   @default(true)  // internal function hook vs external webhook
+  handlerName   String?   // name of internal handler function
+  config        Json?     // hook configuration
+  retryCount    Int       @default(3)
+  timeoutMs     Int       @default(5000)
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  hookExecutions HookExecution[]
+
+  @@index([event, status])
+  @@index([createdById, createdAt])
+}
+
+model HookExecution {
+  id          String   @id @default(cuid())
+  hookId      String
+  hook        Hook     @relation(fields: [hookId], references: [id])
+  event       HookEvent
+  status      String   // SUCCESS, FAILED, TIMEOUT, RETRYING
+  attempt     Int      @default(1)
+  requestPayload Json?
+  responsePayload Json?
+  errorMessage String?
+  durationMs  Int?
+  executedAt  DateTime @default(now())
+
+  @@index([hookId, executedAt])
+  @@index([event, status])
+  @@index([executedAt])
+}
+
+model Rail {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  event       HookEvent  // which event this rail guards
+  scope       RailScope  @default(GLOBAL)
+  scopeValue  String?    // role name, patient id, or org id depending on scope
+  severity    RailSeverity @default(WARNING)
+  action      RailAction @default(WARN)
+  condition   Json       // the guardrail condition (JSON logic)
+  isEnabled   Boolean    @default(true)
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  railViolations RailViolation[]
+
+  @@index([event, scope, isEnabled])
+  @@index([severity, action])
+}
+
+model RailViolation {
+  id          String   @id @default(cuid())
+  railId      String
+  rail        Rail     @relation(fields: [railId], references: [id])
+  event       HookEvent
+  patientId   String?
+  patient     Patient? @relation(fields: [patientId], references: [id])
+  actorId     String?
+  actor       User?    @relation("RailViolationActor", fields: [actorId], references: [id])
+  severity    RailSeverity
+  actionTaken RailAction
+  context     Json     // the context that triggered the violation
+  resolved    Boolean  @default(false)
+  resolvedById String?
+  resolvedBy  User?    @relation("RailViolationResolver", fields: [resolvedById], references: [id])
+  resolvedAt  DateTime?
+  resolutionNote String?
+  createdAt   DateTime @default(now())
+
+  @@index([railId, createdAt])
+  @@index([patientId, createdAt])
+  @@index([resolved, createdAt])
+}
+
+model ServiceCoordination {
+  id           String   @id @default(cuid())
+  module       String   // module name (e.g., 'reports', 'live-data', 'onboarding')
+  serviceName  String
+  status       String   // HEALTHY, DEGRADED, DOWN, MAINTENANCE
+  lastHeartbeat DateTime?
+  lastCheck    DateTime?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([module, status])
+  @@index([updatedAt])
+  @@unique([module, serviceName])
 }
