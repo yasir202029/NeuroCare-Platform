@@ -8,6 +8,7 @@ import {
   requireRole,
 } from '../../middleware/auth.js';
 import { asyncHandler } from '../../shared/http.js';
+import { requirePatientAccess } from '../../middleware/patient-authz.js';
 import { prisma } from '../../shared/db.js';
 import { badRequest, notFound, forbidden } from '../../shared/errors.js';
 
@@ -69,6 +70,7 @@ router.post(
 
 router.get(
   '/submissions',
+  requirePatientAccess('query'),
   asyncHandler(async (req, res) => {
     const { formDefinitionId, patientId } = req.query;
     const where: Record<string, unknown> = {};

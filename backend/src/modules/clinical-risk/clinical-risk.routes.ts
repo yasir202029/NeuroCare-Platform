@@ -8,6 +8,7 @@ import {
   requireRole,
 } from '../../middleware/auth.js';
 import { asyncHandler } from '../../shared/http.js';
+import { requirePatientAccess } from '../../middleware/patient-authz.js';
 import { prisma } from '../../shared/db.js';
 import { badRequest, notFound, forbidden } from '../../shared/errors.js';
 
@@ -51,6 +52,7 @@ const bandToRankWeight: Record<RiskBand, number> = {
 
 router.get(
   '/risk-scores',
+  requirePatientAccess('query'),
   asyncHandler(async (req, res) => {
     const { patientId, riskBand } = req.query;
     const where: Record<string, unknown> = {};
@@ -71,6 +73,7 @@ router.get(
 router.post(
   '/risk-scores',
   requireRole(...clinicalStaffRoles, Role.ADMIN),
+  requirePatientAccess('body'),
   audit('CLINICAL_RISK_SCORE_CREATED', 'ClinicalRiskScore'),
   asyncHandler(async (req, res) => {
     const body = z
