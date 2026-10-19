@@ -1,4 +1,4 @@
-import { authenticatedFetch } from "./client-api.js";
+import { authenticatedFetch } from "./client-api";
 
 const API = "/api/v1";
 

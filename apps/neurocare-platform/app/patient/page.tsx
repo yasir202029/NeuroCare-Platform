@@ -4,15 +4,6 @@ import { useEffect, useState } from "react";
 import { PlatformShell } from "../../components/platform-shell";
 import { getPatientProfile, type PatientProfile } from "../../lib/patient-api";
 
-export const metadata = {
-  title: "Patient Portal — NeuroCare Platform",
-  description: "Patient workspace: submit ADHD intake, update care information, request appointments and message your care team.",
-  openGraph: {
-    title: "Patient Portal — NeuroCare Platform",
-    description: "Patient workspace: submit ADHD intake, update care information, request appointments and message your care team.",
-    type: "website",
-  },
-};
 
 export default function PatientPage() {
   const [profile, setProfile] = useState<PatientProfile | null>(null);
