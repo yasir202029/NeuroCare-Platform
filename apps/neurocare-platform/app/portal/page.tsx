@@ -6,6 +6,8 @@ const portals = [
   { name: "Admin", href: "/admin", desc: "Users, patients, workflows, audit, GDPR" },
   { name: "Finance", href: "/finance", desc: "Invoices, reconciliation, earnings" },
   { name: "Engine", href: "/engine", desc: "Workflow engine, rules, tasks, events" },
+  { name: "Hooks & Rails", href: "/hooks-console", desc: "Extension hooks, guardrails, audit" },
+  { name: "Live Data", href: "/live-data", desc: "Real-time vitals and adherence stream" },
 ];
 
 export default function PortalHubPage() {

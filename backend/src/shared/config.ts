@@ -43,6 +43,13 @@ const schema = z.object({
   RATE_LIMIT_API_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(5),
   RATE_LIMIT_WRITE_MAX: z.coerce.number().int().positive().default(30),
+  HOOKS_ENABLED: z.coerce.boolean().default(true),
+  HOOK_DEFAULT_SEVERITY: z.enum(['INFO','WARNING','CRITICAL']).default('WARNING'),
+  RAILS_ENABLED: z.coerce.boolean().default(true),
+  LIVE_DATA_ENABLED: z.coerce.boolean().default(true),
+  LIVE_DATA_WS_PATH: z.string().default('/api/v1/live-data/ws'),
+  REPORT_ENGINE_URL: z.string().default('http://report-engine:8000'),
+  CLINICAL_AI_URL: z.string().default('http://clinical-ai:8001'),
 });
 
 export const config = schema.parse(process.env);
