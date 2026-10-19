@@ -780,6 +780,7 @@ model SecurityAlert {
 model Patient {
   id                   String                   @id @default(cuid())
   userId               String                   @unique
+  organizationId       String?
   nhsNumberCipher      String?
   nhsNumberHash        String?                  @unique
   dateOfBirth          DateTime?
@@ -793,6 +794,7 @@ model Patient {
   currentMedication    Json?
   accessibilityNeeds   String?
   user                 User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization         Organization?            @relation(fields: [organizationId], references: [id])
   contacts             PatientContact[]
   assessments          Assessment[]
   appointments         Appointment[]
@@ -2197,6 +2199,7 @@ model Organization {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   members              OrganizationMember[]
+  patients             Patient[]
   usageMeters          UsageMeter[]
   apiKeys              ApiKey[]
   subscriptionInvoices SubscriptionInvoice[]

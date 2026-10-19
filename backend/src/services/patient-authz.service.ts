@@ -39,9 +39,24 @@ export async function assertPatientAccess(
 ) {
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, organizationId: true },
   });
   if (!patient) throw notFound("Patient not found");
+
+  // Resolve the actor's active organisation memberships.
+  const memberships = await prisma.organizationMember.findMany({
+    where: { userId },
+    select: { orgId: true },
+  });
+  const actorOrgIds = new Set(memberships.map((m) => m.orgId));
+
+  // Tenant isolation: if the patient belongs to an organisation, the actor must
+  // belong to the same organisation (unless platform admin).
+  if (patient.organizationId && !roles.includes(Role.ADMIN)) {
+    if (!actorOrgIds.has(patient.organizationId)) {
+      throw forbidden("Cross-organisation access denied.");
+    }
+  }
 
   if (roles.includes(Role.ADMIN)) return;
 

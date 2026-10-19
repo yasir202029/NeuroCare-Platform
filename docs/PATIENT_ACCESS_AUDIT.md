@@ -39,7 +39,12 @@ Generated: 2026-10-19. Scope: all backend/src/modules/*/*.routes.ts that touch p
 
 ## Tenant/Organisation Isolation
 
-The Prisma schema has organisation-related models. Patient and staff linkage to organisation needs verification. Currently, organisation membership is not enforced in patient-access middleware. This is a documented gap (see P1-? in production audit). Remediation: add organisationId checks to assertPatientAccess and requirePatientAccess. Requires schema review.
+Implemented (P1 vertical slice):
+- Patient model: added nullable `organizationId` field + Organization relation (migration 0002_patient_organization).
+- assertPatientAccess now resolves actor's OrganizationMember memberships and denies cross-organisation access when patient.organizationId is set.
+- ADMIN bypasses (platform-level).
+- Backfill: existing patients have organizationId=null (no enforcement until backfilled). Safe, non-destructive (nullable column).
+- Gap: User-level org membership (OrganizationMember) is the only link; staff must have an OrganizationMember row. Backfill required for existing users.
 
 ## Endpoints still requiring remediation (priority)
 1. clinical-risk routes — add requirePatientAccess

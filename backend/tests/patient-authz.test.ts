@@ -4,10 +4,12 @@ import { Role } from "@prisma/client";
 vi.mock("../src/shared/db.js", () => {
   const pf = vi.fn();
   const pa = vi.fn();
+  const om = vi.fn(() => Promise.resolve([]));
   return {
-    prisma: { patient: { findUnique: pf }, patientAssignment: { findFirst: pa } },
+    prisma: { patient: { findUnique: pf }, patientAssignment: { findFirst: pa }, organizationMember: { findMany: om } },
     __pf: pf,
     __pa: pa,
+    __om: om,
   };
 });
 
@@ -23,10 +25,10 @@ function mockPatient(found: boolean, pid: string = patientId, uid: string = user
   patientFindUnique.mockImplementation(({ where }: { where: { id?: string; userId?: string } }) => {
     if (!found) return Promise.resolve(null);
     if (where.id !== undefined) {
-      if (where.id === pid) return Promise.resolve({ id: pid, userId: uid });
-      return Promise.resolve({ id: where.id, userId: "other-user" });
+      if (where.id === pid) return Promise.resolve({ id: pid, userId: uid, organizationId: null });
+      return Promise.resolve({ id: where.id, userId: "other-user", organizationId: null });
     }
-    if (where.userId === uid) return Promise.resolve({ id: pid, userId: uid });
+    if (where.userId === uid) return Promise.resolve({ id: pid, userId: uid, organizationId: null });
     return Promise.resolve(null);
   });
 }
@@ -47,7 +49,7 @@ describe("resolvePatientId", () => {
   it("returns the patient record when the user has a linked profile", async () => {
     mockPatient(true);
     const result = await resolvePatientId(userId);
-    expect(result).toEqual({ id: patientId, userId });
+    expect(result).toEqual({ id: patientId, userId, organizationId: null });
     expect(patientFindUnique).toHaveBeenCalledWith({
       where: { userId },
       select: { id: true, userId: true },

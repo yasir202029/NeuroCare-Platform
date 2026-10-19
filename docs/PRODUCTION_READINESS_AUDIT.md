@@ -33,7 +33,9 @@ Generated: 2026-10-19. Monorepo consolidated to: apps (marketing-site, neurocare
 - Impact: cannot verify security invariants.
 - Remediation: add integration tests for auth, RBAC, cross-patient isolation, appointment booking, assessments, notes, documents, payments, prescriptions. (Not yet done.)
 
-### P1-2: IDOR/BOLA risk
+### P1-2: IDOR/BOLA risk — PARTIALLY REMEDIATED
+- patient-authz service + middleware added; clinical-notes, live-data, clinical-ai, report-engine, telehealth secured.
+- Tenant isolation: Patient.organizationId added (nullable) + OrganizationMember check in assertPatientAccess.
 - Affected: backend routes using patientId from params/body
 - Evidence: requirePatientOrStaff exists but not applied uniformly; many routes trust client-supplied IDs.
 - Impact: potential cross-patient data exposure.
