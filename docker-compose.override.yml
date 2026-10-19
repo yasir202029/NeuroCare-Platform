@@ -1,0 +1,11 @@
+# Local port publishing (kept separate so production networks stay port-free by default).
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+  backend:
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+  frontend:
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"

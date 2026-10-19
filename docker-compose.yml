@@ -1,5 +1,7 @@
-# NeuroCare Platform - Production Docker Compose
-version: "3.9"
+# NeuroCare Platform - Docker Compose (dev + prod)
+# Usage: docker-compose -f docker-compose.yml up -d          (dev-ish defaults)
+#        docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d   (local ports)
+# Secrets: never commit real values — set them in the environment or a root .env
 
 services:
   ###############################################################################
@@ -7,17 +9,13 @@ services:
   ###############################################################################
   postgres:
     image: postgres:16-alpine
-    container_name: neurocare-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-clinic}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clinic}
       POSTGRES_DB: ${POSTGRES_DB:-clinic}
       PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./backend/prisma/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clinic} -d ${POSTGRES_DB:-clinic}"]
       interval: 10s
@@ -29,15 +27,14 @@ services:
       - neurocare-network
 
   ###############################################################################
-  # DATABASE MIGRATION SERVICE
+  # DATABASE MIGRATION SERVICE (prisma db push — no committed migrations dir)
   ###############################################################################
   migrate:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: builder
-    container_name: neurocare-migrate
-    command: ["npx", "prisma", "db", "push", "--skip-generate"]
+      context: .
+      dockerfile: backend/Dockerfile
+      target: prereqs
+    command: ["sh", "-c", "pnpm --filter ./backend exec prisma db push --skip-generate"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://clinic:clinic@postgres:5432/clinic}
     depends_on:
@@ -52,15 +49,14 @@ services:
   ###############################################################################
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: neurocare-backend
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${BACKEND_PORT:-4000}
+      PORT: 4000
       DATABASE_URL: ${DATABASE_URL:-postgresql://clinic:clinic@postgres:5432/clinic}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-in-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-in-production}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
       JWT_ISSUER: ${JWT_ISSUER:-neurocare-backend}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-neurocare-clients}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
@@ -70,43 +66,20 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-localhost}
       SMTP_PORT: ${SMTP_PORT:-1025}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-    ports:
-      - "${BACKEND_PORT:-4000}:4000"
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      VIDEO_DEV_MODE: ${VIDEO_DEV_MODE:-false}
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/api/v1/health"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 10s
-    networks:
-      - neurocare-network
-
-  ###############################################################################
-  # REDIS (Caching & Session Store)
-  ###############################################################################
-  redis:
-    image: redis:7-alpine
-    container_name: neurocare-redis
-    command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
     networks:
       - neurocare-network
 
@@ -115,24 +88,21 @@ services:
   ###############################################################################
   frontend:
     build:
-      context: ./apps/neurocare-platform
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/neurocare-platform/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
-    container_name: neurocare-frontend
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${FRONTEND_PORT:-3000}
+      PORT: 3000
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>{if(!r.ok)process.exit(1)})"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -140,30 +110,8 @@ services:
     networks:
       - neurocare-network
 
-  ###############################################################################
-  # NGINX REVERSE PROXY (Production Load Balancer)
-  ###############################################################################
-  nginx:
-    image: nginx:alpine
-    container_name: neurocare-nginx
-    ports:
-      - "${NGINX_PORT:-80}:80"
-      - "${NGINX_SSL_PORT:-443}:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - neurocare-network
-
 volumes:
   pgdata:
-  redisdata:
 
 networks:
   neurocare-network:
