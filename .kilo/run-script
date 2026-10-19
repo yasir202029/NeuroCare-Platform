@@ -1,9 +1,15 @@
 #!/bin/sh
 # Run script for Agent Manager.
 # Runs in the selected worktree (or repo root for local).
-# Add the commands to start your project:
+# Starts the full NeuroCare stack:
+#   postgres -> migrate -> backend (4000) -> frontend (3000) + web (3001)
 
-# npm run dev
-# bun run dev
-# cargo run
-# python manage.py runserver
+# Install workspace deps (idempotent)
+pnpm install --frozen-lockfile
+
+# Bring up the full docker-compose stack with local port overrides
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+
+# Show service status and follow logs
+docker-compose -f docker-compose.yml -f docker-compose.override.yml ps
+docker-compose -f docker-compose.yml -f docker-compose.override.yml logs -f --tail=50 backend frontend web
