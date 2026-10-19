@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken";
 import type { RequestHandler } from "express";
 import { Role } from "@prisma/client";
+import { prisma } from "../shared/db.js";
 import { config } from "../shared/config.js";
-import { forbidden, unauthorized } from "../shared/errors.js";
+import { forbidden, unauthorized, notFound } from "../shared/errors.js";
 import type { AuthenticatedUser } from "../shared/types.js";
 
 type Claims = {
@@ -80,26 +81,30 @@ export const portalsForRoles = (roles: Role[]) =>
     portalRoles[portal].some((role) => roles.includes(role)),
   );
 
-export const requirePatientOrStaff: RequestHandler = (req, _res, next) => {
+export const requirePatientOrStaff: RequestHandler = async (req, _res, next) => {
   if (!req.user) return next(unauthorized());
   if (
     req.user.roles.some((role) =>
-      (
-        [
-          Role.ADMIN,
-          Role.PSYCHIATRIST,
-          Role.PRESCRIBER,
-          Role.NURSE,
-          Role.FINANCE,
-        ] as Role[]
-      ).includes(role),
+      ([
+        Role.ADMIN,
+        Role.PSYCHIATRIST,
+        Role.PRESCRIBER,
+        Role.NURSE,
+        Role.FINANCE,
+      ] as Role[]).includes(role),
     )
   )
     return next();
-  if (
-    req.user.roles.includes(Role.PATIENT) &&
-    req.params.patientId === req.user.id
-  )
-    return next();
+  if (req.user.roles.includes(Role.PATIENT)) {
+    // Resolve the Patient record linked to this user and compare Patient.id,
+    // not User.id (a patient's userId and patient.id are different cuid values).
+    const patient = await prisma.patient.findUnique({
+      where: { userId: req.user.id },
+      select: { id: true },
+    });
+    const patientId = typeof req.params.patientId === "string" ? req.params.patientId : Array.isArray(req.params.patientId) ? String(req.params.patientId[0]) : undefined;
+    if (patient && patientId && patient.id === patientId) return next();
+    if (!patientId) return next();
+  }
   next(forbidden());
 };

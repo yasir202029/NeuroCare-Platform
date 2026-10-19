@@ -9,6 +9,7 @@ import {
   requireAuth,
   requireRole,
 } from "../../middleware/auth.js";
+import { requirePatientAccess } from "../../middleware/patient-authz.js";
 import { notFound } from "../../shared/errors.js";
 
 const router = Router();
@@ -51,10 +52,17 @@ router.patch(
 );
 router.get(
   "/patient/:patientId",
+  requirePatientAccess("params"),
   asyncHandler(async (req, res) => {
+    const patientId =
+      typeof req.params.patientId === "string"
+        ? req.params.patientId
+        : Array.isArray(req.params.patientId)
+          ? String(req.params.patientId[0])
+          : "";
     res.json(
       await prisma.clinicalNote.findMany({
-        where: { patientId: typeof req.params.patientId === 'string' ? req.params.patientId : Array.isArray(req.params.patientId) ? req.params.patientId[0] : '' },
+        where: { patientId },
         orderBy: { createdAt: "desc" },
         include: {
           clinician: {
