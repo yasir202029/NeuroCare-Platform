@@ -64,9 +64,6 @@ router.use('/coordination', coordinationRoutes);
 router.use('/config', configRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/gdpr', gdprRoutes);
-<<<<<<< HEAD
 router.use('/telehealth', telehealthRoutes);
-=======
 router.use('/saas-plans', saasPlansRoutes);
->>>>>>> feature/saas-subscriptions
 export default router;
