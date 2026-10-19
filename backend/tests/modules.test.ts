@@ -14,3 +14,10 @@ describe("remote saas modules", () => {
     expect(m.default).toBeDefined();
   });
 });
+
+describe("report engine module", () => {
+  it("exports router", async () => {
+    const m = await import("../src/modules/report-engine/report-engine.routes.js");
+    expect(m.default).toBeDefined();
+  });
+});
