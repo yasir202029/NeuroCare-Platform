@@ -17,3 +17,7 @@ services:
   report-engine:
     ports:
       - "${REPORT_ENGINE_PORT:-8000}:8000"
+
+  clinical-ai:
+    ports:
+      - "${CLINICAL_AI_PORT:-8001}:8001"

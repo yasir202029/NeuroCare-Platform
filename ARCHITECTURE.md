@@ -86,3 +86,39 @@ Startup order: postgres → migrate → backend → frontend/web
 - AI integration: AI insights page wired to backend AI module
 - Clinician Powerhub: advanced EHR workstation with GDPR controls
 - UK GDPR: SAR, erasure, rectification, portability, consent, ROPA, breach log, retention, DPIA
+
+## Remote ADHD/ASD Clinic — Full Journey Architecture
+
+### Patient Journey (entry → completion)
+1. Referral & Intake (GP referral, demographics, consent)
+2. Initial Assessment (clinical interview, rating scales, risk stratification)
+3. Diagnosis (ADHD/ASD formulation)
+4. Titration (medication initiation & dose optimization)
+5. Prescribing (issue, CD/non-CD, courier dispatch)
+6. Shared Care (GP agreement)
+7. Discharge (outcome review, planning)
+
+### Clinician Journey (powerhub workstation)
+- Single workspace: assessment + titration + prescribing (CD & non-CD) + report writing/signing + follow-up
+- Patient worklist, risk ranking, task queues, transfer/escalation
+- AI assistant: draft reports, validate prescriptions, summarise notes, pathway guidance
+- Earnings & accounts, audit trail, GDPR controls
+
+### Admin Role
+- User/patient management, permissions, audit, governance, AI policy, feature flags, SaaS billing
+
+### Services (Docker)
+- postgres (5432) → migrate → backend (4000, engine at /api/v1/engine, hooks/rails, GDPR, clinical-ai proxy, report-engine proxy)
+- frontend (3000) — neurocare-platform (role-routed portals + powerhub + AI + live data)
+- web (3001) — marketing site (SEO)
+- report-engine (8000) — Python/FastAPI report generation
+- clinical-ai (8001) — Python/FastAPI clinical AI (draft reports, validate Rx, summarise, pathway)
+
+### Live Data
+- WebSocket /api/v1/live-data/ws for real-time vitals/symptoms/adherence
+- Frontend useLiveData hook consumes the stream
+
+### Integration
+- Backend proxies to Python services (REPORT_ENGINE_URL, CLINICAL_AI_URL)
+- Engine mounted at /api/v1/engine (rule-validated transitions, tasks, audit)
+- Hooks & rails: extensible guardrails (BLOCK/WARN/LOG/REQUIRE_APPROVAL)

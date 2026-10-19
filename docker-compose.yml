@@ -154,6 +154,24 @@ services:
     networks:
       - neurocare-network
 
+  ###############################################################################
+  # CLINICAL AI (Python/FastAPI)
+  ###############################################################################
+  clinical-ai:
+    build:
+      context: ./python-services/clinical-ai
+    environment:
+      PORT: 8001
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - neurocare-network
+
 volumes:
   pgdata:
 
