@@ -32,3 +32,10 @@ describe("clinical-ai and report-engine modules", () => {
     expect(m.default).toBeDefined();
   });
 });
+
+describe("documents module", () => {
+  it("exports router", async () => {
+    const m = await import("../src/modules/documents/documents.routes.js");
+    expect(m.default).toBeDefined();
+  });
+});
