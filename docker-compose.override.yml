@@ -13,3 +13,7 @@ services:
   web:
     ports:
       - "${WEB_PORT:-3001}:3001"
+
+  report-engine:
+    ports:
+      - "${REPORT_ENGINE_PORT:-8000}:8000"

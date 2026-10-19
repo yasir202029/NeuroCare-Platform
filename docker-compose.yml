@@ -136,6 +136,24 @@ services:
     networks:
       - neurocare-network
 
+  ###############################################################################
+  # REPORT ENGINE (Python/FastAPI)
+  ###############################################################################
+  report-engine:
+    build:
+      context: ./python-services/report-engine
+    environment:
+      PORT: 8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - neurocare-network
+
 volumes:
   pgdata:
 
