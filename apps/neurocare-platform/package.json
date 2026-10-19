@@ -12,7 +12,12 @@
     "@xyflow/react": "^12.12.0",
     "next": "16.1.6",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "@neurocare/clarity": "workspace:*",
+    "@neurocare/permissions": "workspace:*",
+    "@neurocare/feature-flags": "workspace:*",
+    "@neurocare/notifications": "workspace:*",
+    "@neurocare/timeline": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

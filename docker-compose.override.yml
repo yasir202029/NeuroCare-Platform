@@ -9,3 +9,7 @@ services:
   frontend:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
+
+  web:
+    ports:
+      - "${WEB_PORT:-3001}:3001"

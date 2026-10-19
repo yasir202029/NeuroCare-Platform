@@ -62,3 +62,18 @@ NeuroCare is a full-stack ADHD remote clinic platform built with Next.js (fronte
 - Auth: JWT with HttpOnly cookies
 - Real-time: WebSocket for live data
 - Deployment: Docker Compose, GitHub Actions CI/CD
+## Wired Runtime (Docker Compose)
+
+Services (docker-compose.yml + override):
+- postgres (5432) — PostgreSQL 16
+- migrate — Prisma db push (one-shot)
+- backend (4000) — Express API + mounted Engine (/api/v1/engine), JWT auth, rate limiting
+- frontend (3000) — Next.js neurocare-platform (role-routed portals + engine UI)
+- web (3001) — Next.js marketing-site
+
+Health endpoints:
+- Backend: GET /api/v1/health
+- Frontend/Web: GET /
+- Engine: GET /api/v1/engine
+
+Startup order: postgres → migrate → backend → frontend/web

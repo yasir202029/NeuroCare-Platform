@@ -1,0 +1,1 @@
+import type { Metadata } from "next"; import "./styles.css"; export const metadata: Metadata = { title: "NeuroAssess | marketing site", robots: { index: false, follow: false } }; export default function Layout({children}: Readonly<{children: React.ReactNode}>) { return <html lang="en"><body>{children}</body></html>; }
