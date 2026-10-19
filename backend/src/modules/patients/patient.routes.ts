@@ -9,6 +9,7 @@ import {
 import { asyncHandler } from "../../shared/http.js";
 import { prisma } from "../../shared/db.js";
 import { notFound } from "../../shared/errors.js";
+import { toPatientProfileDTO } from "./patient.dto.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -88,7 +89,7 @@ router.get(
       },
     });
     if (!patient) throw notFound("Patient profile not found");
-    res.json(patient);
+    res.json(toPatientProfileDTO(patient));
   }),
 );
 router.patch(
