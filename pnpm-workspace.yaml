@@ -37,12 +37,6 @@ minimumReleaseAgeExclude:
 packages:
   - backend
   - apps/*
-  - packages/*
-  - packages/clinical-consent
-  - packages/portal-routing
-  - lib/*
-  - lib/integrations/*
-  - scripts
 
 catalog:
   '@replit/vite-plugin-cartographer': ^0.5.21

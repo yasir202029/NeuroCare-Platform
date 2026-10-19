@@ -34,23 +34,23 @@ COPY backend/src ./backend/src
 
 # Build emits to backend/dist (outDir is relative to the tsconfig location)
 RUN cd backend && pnpm exec prisma generate && \
-    pnpm run build && \
-    cd /app && \
-    pnpm --filter @workspace/clinic-backend deploy --prod /app/backend-deploy
+    pnpm run build
 
 # Stage 2: runtime — minimal production image
 FROM node:24-alpine AS runner
-WORKDIR /app
+WORKDIR /app/backend
 ENV NODE_ENV=production
 ENV PORT=4000
-# Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
-# Copy built application + self-contained deployed package
+# Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/backend/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/backend/prisma ./prisma
 COPY --from=builder --chown=nodejs:nodejs /app/backend/package.json ./package.json
-COPY --from=builder --chown=nodejs:nodejs /app/backend-deploy/node_modules ./node_modules
+# pnpm per-package node_modules (symlinks into the store)
+COPY --from=builder --chown=nodejs:nodejs /app/backend/node_modules ./node_modules
+# pnpm content-addressable store that the symlinks resolve against
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules
 
 USER nodejs
 EXPOSE 4000
@@ -58,4 +58,3 @@ HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=10s \
     CMD node -e "fetch('http://localhost:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)})"
 
 CMD ["node", "dist/server.js"]
-

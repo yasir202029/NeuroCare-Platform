@@ -58,7 +58,7 @@ export class AiService {
         }),
       });
       if (!resp.ok) return { text: null, model: 'openai-error' };
-      const data = await resp.json();
+      const data = await resp.json() as { choices?: Array<{ message?: { content?: string } }>; }
       return { text: data.choices?.[0]?.message?.content ?? null, model };
     } catch {
       return { text: null, model: 'openai-error' };

@@ -62,7 +62,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nodejs:nodejs /app/frontend-deploy/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/frontend-deploy/package.json ./package.json
 COPY --from=builder --chown=nodejs:nodejs /app/apps/neurocare-platform/.next ./.next
-COPY --from=builder --chown=nodejs:nodejs /app/apps/neurocare-platform/next.config.ts ./next.config.ts
+COPY --from=builder --chown=nodejs:nodejs /app/apps/neurocare-platform/next.config.mjs ./next.config.mjs
 COPY --from=builder --chown=nodejs:nodejs /app/apps/neurocare-platform/public ./public
 
 USER nodejs

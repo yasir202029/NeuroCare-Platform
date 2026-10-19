@@ -1,10 +1,9 @@
-import type { NextConfig } from "next";
 import { resolve } from "node:path";
 
 const apiTarget =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-const config: NextConfig = {
+const config = {
   reactStrictMode: true,
   turbopack: {
     root: resolve(process.cwd(), "../.."),
