@@ -77,3 +77,12 @@ Health endpoints:
 - Engine: GET /api/v1/engine
 
 Startup order: postgres → migrate → backend → frontend/web
+
+## Advanced Features (Remote ADHD Clinic)
+
+- SEO: metadata, sitemap.xml, robots.txt on both frontend and marketing site
+- Visual analytics dashboard: pathway throughput charts
+- Extension hooks & rails console: plugin-style extension points, guardrails
+- AI integration: AI insights page wired to backend AI module
+- Clinician Powerhub: advanced EHR workstation with GDPR controls
+- UK GDPR: SAR, erasure, rectification, portability, consent, ROPA, breach log, retention, DPIA
