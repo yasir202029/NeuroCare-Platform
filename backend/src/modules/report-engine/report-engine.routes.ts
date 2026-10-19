@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { requirePatientAccess } from '../../middleware/patient-authz.js';
 import { asyncHandler } from '../../shared/http.js';
 import { Role } from '@prisma/client';
 import { audit } from '../../middleware/audit.js';
@@ -33,7 +34,7 @@ async function proxy(path: string, method: string, body?: unknown, timeout = TIM
   }
 }
 
-router.post('/generate', requireAuth, requireRole(...clinicalRoles), audit('REPORT_GENERATE', 'ReportEngine'), asyncHandler(async (req, res) => {
+router.post('/generate', requireAuth, requireRole(...clinicalRoles), requirePatientAccess('body'), audit('REPORT_GENERATE', 'ReportEngine'), asyncHandler(async (req, res) => {
   const body = z.object({ patientId: z.string(), type: z.string(), data: z.record(z.string(), z.unknown()).optional() }).parse(req.body);
   const { status, data } = await proxy('/generate', 'POST', body);
   res.status(status).json(data);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { requirePatientAccess } from '../../middleware/patient-authz.js';
 import { asyncHandler } from '../../shared/http.js';
 import { Role } from '@prisma/client';
 import { audit } from '../../middleware/audit.js';
@@ -33,25 +34,25 @@ async function proxy(path: string, method: string, body?: unknown, timeout = TIM
   }
 }
 
-router.post('/draft-report', requireAuth, requireRole(...clinicalRoles), audit('AI_DRAFT_REPORT', 'ClinicalAI'), asyncHandler(async (req, res) => {
+router.post('/draft-report', requireAuth, requireRole(...clinicalRoles), requirePatientAccess('body'), audit('AI_DRAFT_REPORT', 'ClinicalAI'), asyncHandler(async (req, res) => {
   const body = z.object({ patientId: z.string(), sections: z.array(z.string()).optional() }).parse(req.body);
   const { status, data } = await proxy('/draft-report', 'POST', { patientId: body.patientId, clinicianId: (req as any).user?.id, sections: body.sections });
   res.status(status).json(data);
 }));
 
-router.post('/validate-prescription', requireAuth, requireRole(...clinicalRoles), audit('AI_VALIDATE_RX', 'ClinicalAI'), asyncHandler(async (req, res) => {
+router.post('/validate-prescription', requireAuth, requireRole(...clinicalRoles), requirePatientAccess('body'), audit('AI_VALIDATE_RX', 'ClinicalAI'), asyncHandler(async (req, res) => {
   const body = z.object({ patientId: z.string(), medication: z.string(), dose: z.string(), isControlledDrug: z.boolean().optional(), indication: z.string().optional() }).parse(req.body);
   const { status, data } = await proxy('/validate-prescription', 'POST', { ...body, clinicianId: (req as any).user?.id });
   res.status(status).json(data);
 }));
 
-router.post('/summarise-note', requireAuth, requireRole(...clinicalRoles), audit('AI_SUMMARISE_NOTE', 'ClinicalAI'), asyncHandler(async (req, res) => {
+router.post('/summarise-note', requireAuth, requireRole(...clinicalRoles), requirePatientAccess('body'), audit('AI_SUMMARISE_NOTE', 'ClinicalAI'), asyncHandler(async (req, res) => {
   const body = z.object({ patientId: z.string(), note: z.string(), type: z.string().optional() }).parse(req.body);
   const { status, data } = await proxy('/summarise-note', 'POST', { patientId: body.patientId, clinicianId: (req as any).user?.id, note: body.note, type: body.type });
   res.status(status).json(data);
 }));
 
-router.get('/pathway/:patientId', requireAuth, requireRole(...clinicalRoles), asyncHandler(async (req, res) => {
+router.get('/pathway/:patientId', requireAuth, requireRole(...clinicalRoles), requirePatientAccess('params'), asyncHandler(async (req, res) => {
   const { status, data } = await proxy(`/pathway/${req.params.patientId}`, 'GET');
   res.status(status).json(data);
 }));

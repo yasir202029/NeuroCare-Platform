@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { requirePatientAccess } from '../../middleware/patient-authz.js';
 import { asyncHandler } from '../../shared/http.js';
 import { LiveDataService } from './live-data.service.js';
 import { audit } from '../../middleware/audit.js';
@@ -47,6 +48,7 @@ const wearableDataSchema = z.object({
 router.post(
   '/patients/:patientId/vitals',
   requireRole(...[Role.PATIENT, Role.PSYCHIATRIST, Role.PRESCRIBER, Role.NURSE, Role.ADMIN]),
+  requirePatientAccess('params'),
   audit('LIVE_VITALS_INGESTED', 'PatientVitalSigns'),
   asyncHandler(async (req, res) => {
     const patientId = Array.isArray(req.params.patientId) ? req.params.patientId[0] : req.params.patientId;
@@ -59,6 +61,7 @@ router.post(
 router.post(
   '/patients/:patientId/symptoms',
   requireRole(...[Role.PATIENT, Role.PSYCHIATRIST, Role.PRESCRIBER, Role.NURSE, Role.ADMIN]),
+  requirePatientAccess('params'),
   audit('LIVE_SYMPTOM_LOGGED', 'PatientSymptomEntry'),
   asyncHandler(async (req, res) => {
     const patientId = Array.isArray(req.params.patientId) ? req.params.patientId[0] : req.params.patientId;
@@ -71,6 +74,7 @@ router.post(
 router.post(
   '/patients/:patientId/adherence',
   requireRole(...[Role.PATIENT, Role.PSYCHIATRIST, Role.PRESCRIBER, Role.NURSE, Role.ADMIN]),
+  requirePatientAccess('params'),
   audit('LIVE_ADHERENCE_LOGGED', 'MedicationAdherenceLog'),
   asyncHandler(async (req, res) => {
     const patientId = Array.isArray(req.params.patientId) ? req.params.patientId[0] : req.params.patientId;
@@ -103,6 +107,7 @@ router.post(
 router.get(
   '/patients/:patientId/live-dashboard',
   requireAuth,
+  requirePatientAccess('params'),
   asyncHandler(async (req, res) => {
     const patientId = Array.isArray(req.params.patientId) ? req.params.patientId[0] : req.params.patientId;
     const dashboard = await service.getPatientLiveDashboard(patientId);
