@@ -28,7 +28,9 @@ import railRoutes from '../modules/rails/rail.routes.js';
 import coordinationRoutes from '../modules/coordination/coordination.routes.js';
 import configRoutes from '../modules/config/config.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
+import gdprRoutes from '../modules/gdpr/gdpr.routes.js';
 import telehealthRoutes from '../modules/telehealth/telehealth.routes.js';
+import saasPlansRoutes from '../modules/saas-plans/saas-plans.routes.js';
 
 const router = Router();
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'neurocare-backend', timestamp: new Date().toISOString() }));
@@ -61,5 +63,10 @@ router.use('/rails', railRoutes);
 router.use('/coordination', coordinationRoutes);
 router.use('/config', configRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/gdpr', gdprRoutes);
+<<<<<<< HEAD
 router.use('/telehealth', telehealthRoutes);
+=======
+router.use('/saas-plans', saasPlansRoutes);
+>>>>>>> feature/saas-subscriptions
 export default router;
