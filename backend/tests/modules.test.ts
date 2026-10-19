@@ -21,3 +21,14 @@ describe("report engine module", () => {
     expect(m.default).toBeDefined();
   });
 });
+
+describe("clinical-ai and report-engine modules", () => {
+  it("clinical-ai exports router", async () => {
+    const m = await import("../src/modules/clinical-ai/clinical-ai.routes.js");
+    expect(m.default).toBeDefined();
+  });
+  it("report-engine exports router", async () => {
+    const m = await import("../src/modules/report-engine/report-engine.routes.js");
+    expect(m.default).toBeDefined();
+  });
+});

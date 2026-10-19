@@ -28,7 +28,7 @@ export default function AiAssistantPage() {
       <div className="mt-4 flex gap-2">
         <input value={patientId} onChange={(e) => setPatientId(e.target.value)} placeholder="Patient ID" className="rounded border px-3 py-2" />
         <button onClick={() => call(`/pathway/${patientId}`)} className="rounded bg-indigo-600 px-3 py-2 text-white" disabled={loading}>Pathway</button>
-        <button onClick={() => call("/draft-report", { patientId, clinicianId: "me", sections: ["summary", "clinical", "recommendations"] })} className="rounded bg-emerald-600 px-3 py-2 text-white" disabled={loading}>Draft Report</button>
+        <button onClick={() => call("/draft-report", { patientId, sections: ["summary", "clinical", "recommendations"] })} className="rounded bg-emerald-600 px-3 py-2 text-white" disabled={loading}>Draft Report</button>
       </div>
       <pre className="mt-4 overflow-auto rounded bg-white p-4 text-xs shadow">{JSON.stringify(result, null, 2)}</pre>
     </main>

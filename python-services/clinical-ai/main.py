@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 app = FastAPI(title="NeuroCare Clinical AI", version="1.0.0")
 
@@ -27,7 +27,7 @@ class ReportRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "clinical-ai", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "ok", "service": "clinical-ai", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.post("/draft-report")
 def draft_report(req: ReportRequest):
@@ -38,7 +38,7 @@ def draft_report(req: ReportRequest):
         "draft": "Clinical summary drafted by AI. Requires clinician review and signature.",
         "sections": req.sections,
         "status": "draft",
-        "generatedAt": datetime.utcnow().isoformat(),
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
 
 @app.post("/validate-prescription")
@@ -62,7 +62,7 @@ def summarise_note(note: ClinicalNote):
         "patientId": note.patientId,
         "summary": f"AI summary of {note.type} note: {note.note[:120]}...",
         "keyPoints": ["Symptom review", "Risk assessment", "Plan update"],
-        "generatedAt": datetime.utcnow().isoformat(),
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
 
 @app.get("/pathway/{patientId}")

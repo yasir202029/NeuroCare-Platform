@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 app = FastAPI(title="NeuroCare Report Engine", version="1.0.0")
 
@@ -11,7 +11,7 @@ class ReportRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "report-engine", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "ok", "service": "report-engine", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.post("/generate")
 def generate(req: ReportRequest):
@@ -19,7 +19,7 @@ def generate(req: ReportRequest):
         "reportId": f"rep_{req.patientId}_{req.type}",
         "patientId": req.patientId,
         "type": req.type,
-        "generatedAt": datetime.utcnow().isoformat(),
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
         "format": "pdf",
         "status": "ready",
         "sections": ["summary", "clinical", "recommendations", "audit"],
