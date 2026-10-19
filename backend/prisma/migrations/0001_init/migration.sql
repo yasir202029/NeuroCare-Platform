@@ -1,4 +1,3 @@
-npm warn Unknown user config " 7776000 }" ({ "cache-max-age": 7776000 }). This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
