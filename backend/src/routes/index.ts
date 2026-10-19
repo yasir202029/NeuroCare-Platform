@@ -28,6 +28,7 @@ import railRoutes from '../modules/rails/rail.routes.js';
 import coordinationRoutes from '../modules/coordination/coordination.routes.js';
 import configRoutes from '../modules/config/config.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
+import saasPlansRoutes from '../modules/saas-plans/saas-plans.routes.js';
 
 const router = Router();
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'neurocare-backend', timestamp: new Date().toISOString() }));
@@ -60,4 +61,5 @@ router.use('/rails', railRoutes);
 router.use('/coordination', coordinationRoutes);
 router.use('/config', configRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/saas-plans', saasPlansRoutes);
 export default router;
