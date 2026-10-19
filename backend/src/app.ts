@@ -18,12 +18,10 @@ const configuredOrigins = (
     .filter(Boolean),
 );
 
-const defaultOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://localhost:5173",
-  "http://localhost:19006",
-];
+const defaultOrigins =
+  config.NODE_ENV === "production"
+    ? []
+    : ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://localhost:19006"];
 const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins])];
 
 export const app = express();

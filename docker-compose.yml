@@ -27,14 +27,14 @@ services:
       - neurocare-network
 
   ###############################################################################
-  # DATABASE MIGRATION SERVICE (prisma db push — no committed migrations dir)
+  # DATABASE MIGRATION SERVICE (prisma migrate deploy)
   ###############################################################################
   migrate:
     build:
       context: .
       dockerfile: backend/Dockerfile
       target: prereqs
-    command: ["sh", "-c", "pnpm --filter ./backend exec prisma db push --skip-generate"]
+    command: ["sh", "-c", "pnpm --filter ./backend exec prisma migrate deploy"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://clinic:clinic@postgres:5432/clinic}
     depends_on:
