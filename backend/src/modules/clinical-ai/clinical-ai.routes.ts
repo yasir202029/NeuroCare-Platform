@@ -57,3 +57,29 @@ router.get('/pathway/:patientId', requireAuth, requireRole(...clinicalRoles), as
 }));
 
 export default router;
+
+// Portal-specific dynamic endpoints
+router.post('/portal/patient/intake', requireAuth, asyncHandler(async (req, res) => {
+  const r = await proxy('/portal/patient/intake', 'POST', req.body);
+  res.status(r.status).json(r.data);
+}));
+
+router.get('/portal/patient/:patientId/journey', requireAuth, asyncHandler(async (req, res) => {
+  const r = await proxy(`/portal/patient/${req.params.patientId}/journey`, 'GET');
+  res.status(r.status).json(r.data);
+}));
+
+router.post('/portal/clinician/action', requireAuth, requireRole(...clinicalRoles), asyncHandler(async (req, res) => {
+  const r = await proxy('/portal/clinician/action', 'POST', req.body);
+  res.status(r.status).json(r.data);
+}));
+
+router.get('/portal/admin/overview', requireAuth, requireRole(Role.ADMIN), asyncHandler(async (_req, res) => {
+  const r = await proxy('/portal/admin/overview', 'GET');
+  res.status(r.status).json(r.data);
+}));
+
+router.get('/portal/finance/summary', requireAuth, requireRole(Role.ADMIN, Role.FINANCE), asyncHandler(async (_req, res) => {
+  const r = await proxy('/portal/finance/summary', 'GET');
+  res.status(r.status).json(r.data);
+}));

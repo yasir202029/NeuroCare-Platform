@@ -73,3 +73,68 @@ def pathway(patientId: str):
         "current": "assessment",
         "nextActions": ["complete assessment", "risk stratification", "plan titration"],
     }
+
+
+# ---------- Portal-specific dynamic features ----------
+
+class PatientIntake(BaseModel):
+    patientId: str
+    demographics: dict = {}
+    consentGiven: bool = False
+
+@app.post("/portal/patient/intake")
+def patient_intake(req: PatientIntake):
+    return {
+        "patientId": req.patientId,
+        "status": "intake_complete" if req.consentGiven else "consent_required",
+        "nextActions": ["complete assessment", "upload documents"] if req.consentGiven else ["record consent"],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+@app.get("/portal/patient/{patientId}/journey")
+def patient_journey(patientId: str):
+    return {
+        "patientId": patientId,
+        "stages": ["referral", "assessment", "diagnosis", "titration", "prescribing", "shared-care", "discharge"],
+        "current": "assessment",
+        "nextActions": ["complete assessment", "risk stratification"],
+        "progress": 0.28,
+    }
+
+class ClinicianAction(BaseModel):
+    clinicianId: str
+    patientId: str
+    action: str  # assess, titrate, prescribe, report, followup
+    payload: dict = {}
+
+@app.post("/portal/clinician/action")
+def clinician_action(req: ClinicianAction):
+    return {
+        "clinicianId": req.clinicianId,
+        "patientId": req.patientId,
+        "action": req.action,
+        "status": "completed",
+        "nextActions": ["follow-up", "schedule review"],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+@app.get("/portal/admin/overview")
+def admin_overview():
+    return {
+        "users": 0,
+        "patients": 0,
+        "activeClinicians": 0,
+        "pendingReports": 0,
+        "openTasks": 0,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+@app.get("/portal/finance/summary")
+def finance_summary():
+    return {
+        "totalInvoiced": 0,
+        "totalPaid": 0,
+        "outstanding": 0,
+        "clinicianEarnings": 0,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
