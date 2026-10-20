@@ -1,17 +1,53 @@
-:root {
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #1b2437;
-  background: #f6f7f9;
-}
+/* ============================================================================
+   NeuroCare Admin — Operations Workstation
+   Visual system: shared NeuroCare design tokens (@neurocare/clarity).
+   Persona expression: operational, queue-driven, table-oriented, filter-focused.
+   ========================================================================== */
 
-* {
-  box-sizing: border-box;
+@import "@neurocare/clarity/tokens.css";
+
+:root {
+  color-scheme: light;
 }
 
 body {
   margin: 0;
+  background: hsl(var(--clarity-bg-canvas));
+  color: hsl(var(--clarity-text-primary));
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--clarity-density-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
+a {
+  color: hsl(var(--clarity-action-primary));
+}
+
+/* ---- Focus: always visible, never removed ---- */
+:focus-visible {
+  outline: 2px solid hsl(var(--clarity-border-focus));
+  outline-offset: 2px;
+  border-radius: var(--clarity-radius-sm);
+}
+
+/* ---- Skip link ---- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: hsl(var(--clarity-text-primary));
+  color: hsl(var(--clarity-text-inverse));
+  padding: 12px 18px;
+  border-radius: 0 0 var(--clarity-radius-md) 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ---- Shell ---- */
 .ops-shell {
   min-height: 100vh;
   display: grid;
@@ -20,29 +56,29 @@ body {
 
 .ops-nav {
   padding: 26px 16px;
-  border-right: 1px solid #dde1e8;
-  background: #1b2437;
-  color: #eef1f6;
+  border-right: 1px solid hsl(var(--clarity-border-default));
+  background: hsl(var(--clarity-bg-surface));
   position: sticky;
   top: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .ops-nav .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px 32px;
+  padding: 0 12px 28px;
 }
 
-.ops-nav .brand span {
+.ops-nav .brand > span {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  background: #4e6ef2;
-  color: #fff;
+  border-radius: var(--clarity-radius-md);
+  background: hsl(var(--clarity-action-primary));
+  color: hsl(var(--clarity-action-primary-fg));
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -51,7 +87,7 @@ body {
 
 .ops-nav .brand small {
   display: block;
-  color: #9aa6bd;
+  color: hsl(var(--clarity-text-muted));
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -60,36 +96,36 @@ body {
 
 .ops-nav nav {
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 .ops-nav nav button {
   border: 0;
   background: transparent;
-  color: #c8d0e0;
+  color: hsl(var(--clarity-text-secondary));
   font: inherit;
   text-align: left;
   cursor: pointer;
-  border-radius: 9px;
-  padding: 10px 12px;
-  font-size: 14px;
+  border-radius: var(--clarity-radius-md);
+  padding: 9px 12px;
+  transition: background var(--clarity-motion-fast), color var(--clarity-motion-fast);
 }
 
 .ops-nav nav button:hover {
-  background: #232d43;
-  color: #fff;
+  background: hsl(var(--clarity-bg-subtle));
+  color: hsl(var(--clarity-text-primary));
 }
 
 .ops-nav nav button.active {
-  background: #2c3a58;
-  color: #fff;
+  background: hsl(var(--clarity-action-primary) / 0.1);
+  color: hsl(var(--clarity-action-primary));
   font-weight: 700;
 }
 
 .ops-nav .nav-note {
   margin-top: auto;
   padding: 12px;
-  color: #98a3b8;
+  color: hsl(var(--clarity-text-muted));
   font-size: 12px;
   line-height: 1.5;
 }
@@ -97,16 +133,17 @@ body {
 .ops-content {
   max-width: 1500px;
   width: 100%;
-  padding: 34px clamp(20px, 3vw, 46px);
+  padding: 30px clamp(20px, 3vw, 44px) 64px;
   margin: 0 auto;
 }
 
+/* ---- Header ---- */
 .ops-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 18px;
-  margin-bottom: 26px;
+  margin-bottom: 24px;
 }
 
 .eyebrow {
@@ -115,43 +152,61 @@ body {
   letter-spacing: 0.12em;
   font-size: 10px;
   font-weight: 800;
-  color: #6b7896;
+  color: hsl(var(--clarity-text-muted));
 }
 
 h1 {
-  font-size: clamp(28px, 3vw, 40px);
+  font-size: clamp(26px, 3vw, 36px);
   letter-spacing: -0.03em;
   margin: 0 0 6px;
 }
 
 h2 {
-  font-size: 19px;
+  font-size: 18px;
   letter-spacing: -0.02em;
   margin: 0 0 12px;
 }
 
 .muted {
-  color: #5d6a84;
+  color: hsl(var(--clarity-text-muted));
   margin: 0;
   line-height: 1.5;
 }
 
+/* ---- Actions ---- */
 .ops-action {
   border: 0;
-  border-radius: 8px;
-  background: #4e6ef2;
-  color: #fff;
+  border-radius: var(--clarity-radius-md);
+  background: hsl(var(--clarity-action-primary));
+  color: hsl(var(--clarity-action-primary-fg));
   font: inherit;
   font-weight: 700;
   padding: 9px 14px;
   cursor: pointer;
+  transition: background var(--clarity-motion-fast);
 }
 
+.ops-action:hover {
+  background: hsl(var(--clarity-action-primary) / 0.88);
+}
+
+.ops-action:disabled {
+  background: hsl(var(--clarity-text-muted));
+  cursor: not-allowed;
+}
+
+.ops-action--secondary {
+  background: hsl(var(--clarity-action-secondary));
+  color: hsl(var(--clarity-action-secondary-fg));
+  border: 1px solid hsl(var(--clarity-border-default));
+}
+
+/* ---- Error and status ---- */
 .ops-error {
-  border: 1px solid #e7c37a;
-  background: #fdf6e6;
-  color: #6d4c05;
-  border-radius: 10px;
+  border: 1px solid hsl(var(--clarity-status-warning) / 0.45);
+  background: hsl(var(--clarity-status-warning) / 0.08);
+  color: hsl(var(--clarity-text-primary));
+  border-radius: var(--clarity-radius-md);
   padding: 14px 16px;
   margin-bottom: 20px;
   display: flex;
@@ -160,42 +215,47 @@ h2 {
   gap: 14px;
 }
 
+/* ---- Blocks ---- */
 .ops-block {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
+/* ---- Metric strip ---- */
 .ops-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
 }
 
 .ops-metric {
-  background: #fff;
-  border: 1px solid #e1e5ec;
-  border-radius: 12px;
-  padding: 15px 16px;
+  background: hsl(var(--clarity-bg-surface));
+  border: 1px solid hsl(var(--clarity-border-default));
+  border-radius: var(--clarity-radius-md);
+  padding: 13px 15px;
+  box-shadow: var(--clarity-elevation-1);
 }
 
 .ops-metric span {
   display: block;
-  font-size: 12px;
-  color: #6b7896;
+  font-size: 11px;
+  color: hsl(var(--clarity-text-muted));
 }
 
 .ops-metric strong {
   display: block;
-  font-size: 30px;
+  font-size: 27px;
   letter-spacing: -0.03em;
-  margin-top: 6px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
+/* ---- Tables ---- */
 .ops-table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
-  border: 1px solid #e1e5ec;
-  border-radius: 12px;
+  background: hsl(var(--clarity-bg-surface));
+  border: 1px solid hsl(var(--clarity-border-default));
+  border-radius: var(--clarity-radius-md);
   overflow: hidden;
   font-size: 14px;
 }
@@ -203,21 +263,30 @@ h2 {
 .ops-table th,
 .ops-table td {
   text-align: left;
-  padding: 11px 14px;
-  border-bottom: 1px solid #edf0f4;
+  padding: 9px 14px;
+  border-bottom: 1px solid hsl(var(--clarity-border-default) / 0.6);
 }
 
 .ops-table thead th {
-  background: #f2f4f8;
+  background: hsl(var(--clarity-bg-subtle));
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #5d6a84;
+  color: hsl(var(--clarity-text-secondary));
+  font-weight: 700;
+}
+
+.ops-table tbody th {
+  font-weight: 600;
 }
 
 .ops-table tbody tr:last-child th,
 .ops-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.ops-table tbody tr:hover {
+  background: hsl(var(--clarity-bg-subtle) / 0.6);
 }
 
 .sr-only {
@@ -226,8 +295,10 @@ h2 {
   height: 1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
+/* ---- Responsive: desktop-first with safe degradation ---- */
 @media (max-width: 900px) {
   .ops-shell {
     grid-template-columns: 1fr;
@@ -249,5 +320,22 @@ h2 {
 
   .ops-nav .nav-note {
     display: none;
+  }
+
+  /* Tables scroll rather than hiding critical columns. */
+  .ops-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* ---- Motion is opt-out ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

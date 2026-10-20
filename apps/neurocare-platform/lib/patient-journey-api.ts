@@ -18,6 +18,14 @@ export type PatientJourney = {
   milestones: Array<{ key: string; label: string; state: "DONE" | "CURRENT" | "PENDING" | "BLOCKED" }>;
   upcoming: Array<{ id: string; type: string; mode: string; startsAt: string; status: string }>;
   outstanding: Array<{ id: string; title: string; type: string; dueAt: string | null }>;
+  outstandingQuestionnaires: Array<{ submissionId: string; name: string; status: string }>;
+  outstandingDocumentRequests: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    dueAt: string | null;
+    status: string;
+  }>;
   recentUpdates: Array<{ id: string; title: string; type: string; createdAt: string }>;
 };
 

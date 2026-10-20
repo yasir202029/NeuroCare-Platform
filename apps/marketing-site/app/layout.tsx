@@ -24,12 +24,15 @@ export const metadata: Metadata = {
     title: `${SITE_NAME} — Remote ADHD assessment and treatment`,
     description: ORG_DESCRIPTION,
   },
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg" },
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   category: "medical",
+  formatDetection: { email: false, address: false, telephone: false },
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

@@ -79,7 +79,7 @@ export function ClinicianShell({
         >
           {mobileNavOpen ? "Close navigation" : "Navigation"}
         </button>
-        <main className="clinic-content" id="clinician-main" data-path={pathname}>
+        <main className="clinic-content" id="main" data-path={pathname}>
           {children}
         </main>
       </div>

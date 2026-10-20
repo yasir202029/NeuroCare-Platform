@@ -111,6 +111,58 @@ services:
       - neurocare-network
 
   ###############################################################################
+  # CLINICIAN WORKSTATION
+  ###############################################################################
+  clinician:
+    build:
+      context: .
+      dockerfile: apps/clinician-portal/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3005
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3005/').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - neurocare-network
+
+  ###############################################################################
+  # ADMIN OPERATIONS WORKSTATION
+  ###############################################################################
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin-portal/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3006
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3006/').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - neurocare-network
+
+  ###############################################################################
   # MARKETING WEBSITE (Next.js)
   ###############################################################################
   web:

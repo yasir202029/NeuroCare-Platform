@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NeuroCare">
+  <rect width="64" height="64" rx="14" fill="#1f4f8f" />
+  <path
+    d="M20 44V20h5.6l6.4 11.4L38.4 20H44v24h-5.2V29.6L33.6 39h-3.2L25.2 29.6V44z"
+    fill="#ffffff"
+  />
+</svg>

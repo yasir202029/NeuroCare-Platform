@@ -25,3 +25,11 @@ services:
   content-validator:
     ports:
       - "${CONTENT_VALIDATOR_PORT:-8002}:8002"
+
+  clinician:
+    ports:
+      - "${CLINICIAN_PORT:-3005}:3005"
+
+  admin:
+    ports:
+      - "${ADMIN_PORT:-3006}:3006"

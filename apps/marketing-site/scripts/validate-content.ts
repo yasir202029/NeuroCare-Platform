@@ -7,7 +7,7 @@
  * Usage: pnpm --filter @neuroassess/marketing-site run validate:content
  */
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const appDir = path.join(process.cwd(), "app");
@@ -45,13 +45,19 @@ function readContentModel(): PageDescriptor[] {
   return pages;
 }
 
-/** Lists the public routes that actually have a page implementation. */
+/**
+ * Lists the public routes that actually have an implementation.
+ * A route is implemented by a page.tsx (a rendered page) or a route.ts
+ * (a metadata endpoint such as robots.txt or security.txt).
+ */
 function implementedRoutes(): string[] {
   const routes = new Set<string>(["/"]);
   for (const entry of readdirSync(appDir)) {
     const full = path.join(appDir, entry);
     if (!statSync(full).isDirectory()) continue;
-    if (!readFileSync(path.join(full, "page.tsx"), "utf8")) continue;
+    const hasPage = existsSync(path.join(full, "page.tsx"));
+    const hasRoute = existsSync(path.join(full, "route.ts"));
+    if (!hasPage && !hasRoute) continue;
     routes.add(`/${entry}`);
   }
   return [...routes];

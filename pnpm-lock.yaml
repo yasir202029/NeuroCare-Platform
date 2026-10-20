@@ -113,6 +113,9 @@ importers:
 
   apps/admin-portal:
     dependencies:
+      '@neurocare/clarity':
+        specifier: workspace:*
+        version: link:../../packages/clarity
       next:
         specifier: 16.1.6
         version: 16.1.6(@babel/core@7.29.7(supports-color@8.1.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -138,6 +141,9 @@ importers:
 
   apps/clinician-portal:
     dependencies:
+      '@neurocare/clarity':
+        specifier: workspace:*
+        version: link:../../packages/clarity
       next:
         specifier: 16.1.6
         version: 16.1.6(@babel/core@7.29.7(supports-color@8.1.1))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

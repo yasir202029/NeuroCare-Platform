@@ -14,42 +14,60 @@ const nav = [
   { href: "/onboarding", label: "My details" },
 ];
 
+/**
+ * Patient navigation — calm, task-oriented, patient-only destinations.
+ * Clinical, admin and finance destinations are never rendered here.
+ */
 export function PatientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   return (
-    <div style={{ minHeight: "100vh", background: "#f7f9fc", color: "#15233a" }}>
+    <div className="min-h-screen" style={{ background: "hsl(var(--clarity-bg-canvas))", color: "hsl(var(--clarity-text-primary))" }}>
       <header
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "16px 24px",
-          background: "#ffffff",
-          borderBottom: "1px solid #e4ebf3",
+          gap: "16px",
+          flexWrap: "wrap",
+          padding: "14px 24px",
+          background: "hsl(var(--clarity-bg-surface))",
+          borderBottom: "1px solid hsl(var(--clarity-border-default))",
         }}
       >
-        <Link href="/patient" style={{ textDecoration: "none", color: "#15233a", fontWeight: 800, fontSize: 22 }}>
+        <Link
+          href="/patient"
+          style={{ textDecoration: "none", color: "hsl(var(--clarity-text-primary))", fontWeight: 800, fontSize: 20 }}
+        >
           NeuroCare
         </Link>
-        <nav style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {nav.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              style={{
-                textDecoration: "none",
-                color: pathname === n.href ? "#4e6ef2" : "#4c5d7a",
-                fontWeight: pathname === n.href ? 700 : 500,
-                fontSize: 14,
-              }}
-            >
-              {n.label}
-            </Link>
-          ))}
+        <nav aria-label="Patient sections" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {nav.map((n) => {
+            const active = pathname === n.href;
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={active ? "page" : undefined}
+                style={{
+                  textDecoration: "none",
+                  color: active ? "hsl(var(--clarity-action-primary))" : "hsl(var(--clarity-text-secondary))",
+                  background: active ? "hsl(var(--clarity-action-primary) / 0.1)" : "transparent",
+                  fontWeight: active ? 700 : 500,
+                  fontSize: 15,
+                  padding: "8px 12px",
+                  borderRadius: "var(--clarity-radius-md)",
+                }}
+              >
+                {n.label}
+              </Link>
+            );
+          })}
         </nav>
         <NotificationBell />
       </header>
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: 24 }}>{children}</main>
+      <main id="main" style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px 64px" }}>
+        {children}
+      </main>
     </div>
   );
 }

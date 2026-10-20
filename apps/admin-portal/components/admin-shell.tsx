@@ -57,7 +57,7 @@ export function AdminShell({
           through assigned-patient permissions.
         </p>
       </aside>
-      <main className="ops-content">{children}</main>
+      <main className="ops-content" id="main">{children}</main>
     </div>
   );
 }
