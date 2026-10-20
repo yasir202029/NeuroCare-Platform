@@ -100,6 +100,14 @@ enum DocumentType {
   OTHER
 }
 
+enum DocumentRequestStatus {
+  PENDING
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
 enum InvoiceStatus {
   DRAFT
   OPEN
@@ -239,11 +247,20 @@ enum ShipmentStatus {
   FAILED
 }
 
+enum ClinicalFormSubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  REVIEWED
+}
+
 enum TaskType {
   PENDING_NOTE
   PENDING_REPORT
   PENDING_PRESCRIPTION
   MISSING_DOCUMENT
+  QUESTIONNAIRE_REVIEW
+  DOCUMENT_REVIEW
   ADMIN
 }
 
@@ -619,6 +636,8 @@ model User {
   queueAssignments           TeamQueueItem[]          @relation("QueueAssignee")
   formDefinitions            ClinicalFormDefinition[] @relation("FormDefinitionAuthor")
   formSubmissions            ClinicalFormSubmission[] @relation("FormSubmissionAuthor")
+  reviewedFormSubmissions    ClinicalFormSubmission[] @relation("FormSubmissionReviewer")
+  documentRequestsMade       DocumentRequest[]        @relation("DocumentRequester")
   riskScoresAuthored         ClinicalRiskScore[]      @relation("RiskScoreAuthor")
   rankingsReviewed           PatientRanking[]         @relation("RankingReviewer")
   safetyAlertsAuthored       MedicationSafetyAlert[]  @relation("SafetyAlertAuthor")
@@ -630,16 +649,16 @@ model User {
   reportSharesSent           ReportShare[]            @relation("ReportShareSender")
   reportSharesReceived       ReportShare[]            @relation("ReportShareRecipient")
   reportAccesses             ReportAccess[]
-  reportSignaturesRevoked    ReportSignature[]       @relation("ReportSignatureRevoker")
-  reportNextStepsAsClinician ReportNextStep[]        @relation("ReportNextStepClinician")
-  reportNextStepsCreated     ReportNextStep[]        @relation("ReportNextStepCreator")
-  gpCommunicationsSent       GpCommunication[]       @relation("GpCommunicationSender")
-  gpRecordUpdatesApplied     GpRecordUpdate[]       @relation("GpRecordUpdateApplier")
-  gpRecordUpdatesReviewed    GpRecordUpdate[]       @relation("GpRecordUpdateReviewer")
+  reportSignaturesRevoked    ReportSignature[]        @relation("ReportSignatureRevoker")
+  reportNextStepsAsClinician ReportNextStep[]         @relation("ReportNextStepClinician")
+  reportNextStepsCreated     ReportNextStep[]         @relation("ReportNextStepCreator")
+  gpCommunicationsSent       GpCommunication[]        @relation("GpCommunicationSender")
+  gpRecordUpdatesApplied     GpRecordUpdate[]         @relation("GpRecordUpdateApplier")
+  gpRecordUpdatesReviewed    GpRecordUpdate[]         @relation("GpRecordUpdateReviewer")
   hooksCreated               Hook[]
   railsCreated               Rail[]
-  railViolationsActed        RailViolation[]       @relation("RailViolationActor")
-  railViolationsResolved     RailViolation[]       @relation("RailViolationResolver")
+  railViolationsActed        RailViolation[]          @relation("RailViolationActor")
+  railViolationsResolved     RailViolation[]          @relation("RailViolationResolver")
   createdAt                  DateTime                 @default(now())
   updatedAt                  DateTime                 @updatedAt
 }
@@ -813,6 +832,7 @@ model Patient {
   recordingConsents    RecordingConsent[]
   reports              Report[]
   assignments          PatientAssignment[]
+  documentRequests     DocumentRequest[]
   workflowTransitions  WorkflowTransition[]
   queueItems           TeamQueueItem[]
   coverArrangements    CoverArrangement[]
@@ -1006,27 +1026,27 @@ model RecordingConsent {
 }
 
 model Assessment {
-  id              String                    @id @default(cuid())
-  patientId       String
-  clinicianId     String?
-  type            AssessmentType
-  status          AssessmentStatus          @default(DRAFT)
-  startedAt       DateTime?
-  completedAt     DateTime?
-  formulation     String?
-  recommendations Json?
-  patient         Patient                   @relation(fields: [patientId], references: [id])
-  clinician       Clinician?                @relation(fields: [clinicianId], references: [id])
-  adhd            AdhdAssessment?
-  autism          AutismAssessment?
-  screenings      ScreeningResponse[]
-  workflowEvents  AssessmentWorkflowEvent[]
-  documents       Document[]
-  aiDocuments     AiGeneratedDocument[]
-  reports         Report[]
+  id               String                    @id @default(cuid())
+  patientId        String
+  clinicianId      String?
+  type             AssessmentType
+  status           AssessmentStatus          @default(DRAFT)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  formulation      String?
+  recommendations  Json?
+  patient          Patient                   @relation(fields: [patientId], references: [id])
+  clinician        Clinician?                @relation(fields: [clinicianId], references: [id])
+  adhd             AdhdAssessment?
+  autism           AutismAssessment?
+  screenings       ScreeningResponse[]
+  workflowEvents   AssessmentWorkflowEvent[]
+  documents        Document[]
+  aiDocuments      AiGeneratedDocument[]
+  reports          Report[]
   gpCommunications GpCommunication[]
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
 
   @@index([patientId, type, status])
 }
@@ -1129,20 +1149,20 @@ model MedicationReview {
 }
 
 model SharedCareAgreement {
-  id          String    @id @default(cuid())
-  patientId   String
-  clinicianId String
-  gpName      String?
-  gpPractice  String?
-  status      String
-  startDate   DateTime?
-  reviewDate  DateTime?
-  documentId  String?   @unique
-  patient     Patient   @relation(fields: [patientId], references: [id])
-  clinician   Clinician @relation(fields: [clinicianId], references: [id])
-  document    Document? @relation(fields: [documentId], references: [id])
+  id               String            @id @default(cuid())
+  patientId        String
+  clinicianId      String
+  gpName           String?
+  gpPractice       String?
+  status           String
+  startDate        DateTime?
+  reviewDate       DateTime?
+  documentId       String?           @unique
+  patient          Patient           @relation(fields: [patientId], references: [id])
+  clinician        Clinician         @relation(fields: [clinicianId], references: [id])
+  document         Document?         @relation(fields: [documentId], references: [id])
   gpCommunications GpCommunication[]
-  createdAt   DateTime  @default(now())
+  createdAt        DateTime          @default(now())
 }
 
 model PhysicalHealthReview {
@@ -1212,29 +1232,30 @@ model ClinicalNoteVersion {
 }
 
 model Document {
-  id             String               @id @default(cuid())
-  patientId      String
-  assessmentId   String?
-  noteId         String?
-  type           DocumentType
-  name           String
-  mimeType       String
-  sizeBytes      Int
-  checksum       String?
-  currentVersion Int                  @default(1)
-  invoiceId      String?              @unique
-  prescriptionId String?              @unique
-  patient        Patient              @relation(fields: [patientId], references: [id])
-  assessment     Assessment?          @relation(fields: [assessmentId], references: [id])
-  note           ClinicalNote?        @relation(fields: [noteId], references: [id])
-  versions       DocumentVersion[]
-  accessLogs     DocumentAccessLog[]
-  sharedCare     SharedCareAgreement?
-  invoice        Invoice?             @relation("InvoiceDocument", fields: [invoiceId], references: [id])
-  prescription   Prescription?        @relation("PrescriptionDocument", fields: [prescriptionId], references: [id])
-  courierProof   CourierShipment?     @relation("CourierProof")
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  id               String               @id @default(cuid())
+  patientId        String
+  assessmentId     String?
+  noteId           String?
+  type             DocumentType
+  name             String
+  mimeType         String
+  sizeBytes        Int
+  checksum         String?
+  currentVersion   Int                  @default(1)
+  invoiceId        String?              @unique
+  prescriptionId   String?              @unique
+  patient          Patient              @relation(fields: [patientId], references: [id])
+  assessment       Assessment?          @relation(fields: [assessmentId], references: [id])
+  note             ClinicalNote?        @relation(fields: [noteId], references: [id])
+  versions         DocumentVersion[]
+  accessLogs       DocumentAccessLog[]
+  sharedCare       SharedCareAgreement?
+  invoice          Invoice?             @relation("InvoiceDocument", fields: [invoiceId], references: [id])
+  prescription     Prescription?        @relation("PrescriptionDocument", fields: [prescriptionId], references: [id])
+  courierProof     CourierShipment?     @relation("CourierProof")
+  fulfilledRequest DocumentRequest?     @relation("FulfilledDocument")
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   @@index([patientId, type, createdAt])
 }
@@ -1602,49 +1623,49 @@ enum NextStepStatus {
 }
 
 model ReportSignature {
-  id             String                  @id @default(cuid())
-  reportId       String
-  report         Report                  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  signerId       String
-  signer         User                    @relation(fields: [signerId], references: [id])
-  method         ReportSignatureMethod   @default(DIGITAL)
-  status         ReportSignatureStatus   @default(PENDING)
-  signatureHash  String?                 @unique
-  signedAt       DateTime?
-  ipAddress      String?
-  userAgent      String?
-  mfaVerified    Boolean                 @default(false)
-  revokedAt      DateTime?
-  revokedById    String?
-  revokedBy      User?                   @relation("ReportSignatureRevoker", fields: [revokedById], references: [id])
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  id            String                @id @default(cuid())
+  reportId      String
+  report        Report                @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  signerId      String
+  signer        User                  @relation(fields: [signerId], references: [id])
+  method        ReportSignatureMethod @default(DIGITAL)
+  status        ReportSignatureStatus @default(PENDING)
+  signatureHash String?               @unique
+  signedAt      DateTime?
+  ipAddress     String?
+  userAgent     String?
+  mfaVerified   Boolean               @default(false)
+  revokedAt     DateTime?
+  revokedById   String?
+  revokedBy     User?                 @relation("ReportSignatureRevoker", fields: [revokedById], references: [id])
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
+  @@unique([reportId, signerId])
   @@index([reportId, status])
   @@index([signerId, status])
   @@index([signatureHash])
-  @@unique([reportId, signerId])
 }
 
 model ReportShare {
-  id             String                  @id @default(cuid())
-  reportId       String
-  report         Report                  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  patientId      String
-  patient        Patient                 @relation(fields: [patientId], references: [id])
-  sharedById     String
-  sharedBy       User                    @relation("ReportShareSender", fields: [sharedById], references: [id])
-  sharedWithId   String?
-  sharedWith     User?                   @relation("ReportShareRecipient", fields: [sharedWithId], references: [id])
-  purpose        ReportSharePurpose
-  status         ReportShareStatus       @default(PENDING)
-  accessToken    String?                 @unique
+  id              String             @id @default(cuid())
+  reportId        String
+  report          Report             @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient            @relation(fields: [patientId], references: [id])
+  sharedById      String
+  sharedBy        User               @relation("ReportShareSender", fields: [sharedById], references: [id])
+  sharedWithId    String?
+  sharedWith      User?              @relation("ReportShareRecipient", fields: [sharedWithId], references: [id])
+  purpose         ReportSharePurpose
+  status          ReportShareStatus  @default(PENDING)
+  accessToken     String?            @unique
   accessExpiresAt DateTime?
-  accessedAt     DateTime?
-  accessCount    Int                     @default(0)
-  message        String?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  accessedAt      DateTime?
+  accessCount     Int                @default(0)
+  message         String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@index([reportId, status])
   @@index([patientId, status])
@@ -1653,17 +1674,17 @@ model ReportShare {
 }
 
 model ReportAccess {
-  id          String   @id @default(cuid())
-  reportId    String
-  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  reportId     String
+  report       Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
   accessedById String
-  accessedBy  User     @relation(fields: [accessedById], references: [id])
-  patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id])
-  action      String   // VIEW, DOWNLOAD, PRINT, SHARE
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  accessedBy   User     @relation(fields: [accessedById], references: [id])
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id])
+  action       String // VIEW, DOWNLOAD, PRINT, SHARE
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
 
   @@index([reportId, createdAt])
   @@index([accessedById, createdAt])
@@ -1671,11 +1692,11 @@ model ReportAccess {
 }
 
 model ReportNextStep {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   reportId    String
-  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report      Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
   patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id])
+  patient     Patient        @relation(fields: [patientId], references: [id])
   type        NextStepType
   status      NextStepStatus @default(PROPOSED)
   title       String
@@ -1683,11 +1704,11 @@ model ReportNextStep {
   scheduledAt DateTime?
   completedAt DateTime?
   clinicianId String?
-  clinician   User?    @relation("ReportNextStepClinician", fields: [clinicianId], references: [id])
+  clinician   User?          @relation("ReportNextStepClinician", fields: [clinicianId], references: [id])
   createdById String
-  createdBy   User     @relation("ReportNextStepCreator", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdBy   User           @relation("ReportNextStepCreator", fields: [createdById], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([reportId, status])
   @@index([patientId, status])
@@ -1899,22 +1920,49 @@ model KpiSnapshot {
 }
 
 model ClinicalTask {
-  id           String     @id @default(cuid())
-  type         TaskType
-  status       TaskStatus @default(OPEN)
-  title        String
-  dueAt        DateTime?
-  patientId    String?
-  clinicianId  String?
-  assignedToId String?
-  metadata     Json?
-  clinician    Clinician? @relation("ClinicianTaskAssignee", fields: [clinicianId], references: [id])
-  assignedTo   User?      @relation("TaskAssignee", fields: [assignedToId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                        String                  @id @default(cuid())
+  type                      TaskType
+  status                    TaskStatus              @default(OPEN)
+  title                     String
+  dueAt                     DateTime?
+  patientId                 String?
+  clinicianId               String?
+  assignedToId              String?
+  questionnaireSubmissionId String?                 @unique
+  documentRequestId         String?                 @unique
+  metadata                  Json?
+  clinician                 Clinician?              @relation("ClinicianTaskAssignee", fields: [clinicianId], references: [id])
+  assignedTo                User?                   @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  questionnaireSubmission   ClinicalFormSubmission? @relation("QuestionnaireReviewTask", fields: [questionnaireSubmissionId], references: [id])
+  documentRequest           DocumentRequest?        @relation("DocumentReviewTask", fields: [documentRequestId], references: [id])
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
 
   @@index([status, dueAt])
   @@index([clinicianId, status])
+}
+
+model DocumentRequest {
+  id            String                @id @default(cuid())
+  patientId     String
+  requestedById String
+  title         String
+  description   String?
+  category      String
+  status        DocumentRequestStatus @default(PENDING)
+  dueAt         DateTime?
+  documentId    String?               @unique
+  reviewNotes   String?
+  reviewedAt    DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  patient       Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  requestedBy   User                  @relation("DocumentRequester", fields: [requestedById], references: [id])
+  document      Document?             @relation("FulfilledDocument", fields: [documentId], references: [id])
+  clinicalTask  ClinicalTask?         @relation("DocumentReviewTask")
+
+  @@index([patientId, status])
+  @@index([requestedById, status])
 }
 
 model Feedback {
@@ -2021,19 +2069,28 @@ model ClinicalFormDefinition {
 }
 
 model ClinicalFormSubmission {
-  id               String                 @id @default(cuid())
+  id               String                       @id @default(cuid())
   formDefinitionId String
   patientId        String
   clinicianId      String?
   answers          Json
   completedAt      DateTime?
-  createdAt        DateTime               @default(now())
-  formDefinition   ClinicalFormDefinition @relation(fields: [formDefinitionId], references: [id])
-  patient          Patient                @relation("FormSubmissionPatient", fields: [patientId], references: [id])
-  clinician        User?                  @relation("FormSubmissionAuthor", fields: [clinicianId], references: [id])
+  status           ClinicalFormSubmissionStatus @default(DRAFT)
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  reviewedById     String?
+  reviewNotes      String?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  formDefinition   ClinicalFormDefinition       @relation(fields: [formDefinitionId], references: [id])
+  patient          Patient                      @relation("FormSubmissionPatient", fields: [patientId], references: [id])
+  clinician        User?                        @relation("FormSubmissionAuthor", fields: [clinicianId], references: [id])
+  reviewedBy       User?                        @relation("FormSubmissionReviewer", fields: [reviewedById], references: [id])
+  clinicalTask     ClinicalTask?                @relation("QuestionnaireReviewTask")
 
   @@index([formDefinitionId, patientId])
   @@index([patientId, createdAt])
+  @@index([status, submittedAt])
 }
 
 model ClinicalRiskScore {
@@ -2517,33 +2574,33 @@ enum RailScope {
 }
 
 model GpCommunication {
-  id              String              @id @default(cuid())
-  patientId       String
-  patient         Patient             @relation(fields: [patientId], references: [id])
-  clinicianId     String?
-  clinician       User?               @relation("GpCommunicationSender", fields: [clinicianId], references: [id])
-  assessmentId    String?
-  assessment      Assessment?         @relation(fields: [assessmentId], references: [id])
-  prescriptionId  String?
-  prescription    Prescription?       @relation(fields: [prescriptionId], references: [id])
-  gpName          String
-  gpPractice      String
-  gpEmail         String?
-  gpNhsNumber     String?
-  communicationType String          // ASSESSMENT, MEDICATION, SHARED_CARE, DISCHARGE, CONSULTATION
-  status          GpCommunicationStatus @default(PENDING)
-  subject         String
-  content         String
+  id                    String                @id @default(cuid())
+  patientId             String
+  patient               Patient               @relation(fields: [patientId], references: [id])
+  clinicianId           String?
+  clinician             User?                 @relation("GpCommunicationSender", fields: [clinicianId], references: [id])
+  assessmentId          String?
+  assessment            Assessment?           @relation(fields: [assessmentId], references: [id])
+  prescriptionId        String?
+  prescription          Prescription?         @relation(fields: [prescriptionId], references: [id])
+  gpName                String
+  gpPractice            String
+  gpEmail               String?
+  gpNhsNumber           String?
+  communicationType     String // ASSESSMENT, MEDICATION, SHARED_CARE, DISCHARGE, CONSULTATION
+  status                GpCommunicationStatus @default(PENDING)
+  subject               String
+  content               String
   sharedCareAgreementId String?
-  sharedCareAgreement SharedCareAgreement? @relation(fields: [sharedCareAgreementId], references: [id])
-  deliveredAt     DateTime?
-  acknowledgedAt  DateTime?
-  acknowledgedBy  String?
-  failureReason   String?
-  sentAt          DateTime      @default(now())
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  gpRecordUpdates GpRecordUpdate[]
+  sharedCareAgreement   SharedCareAgreement?  @relation(fields: [sharedCareAgreementId], references: [id])
+  deliveredAt           DateTime?
+  acknowledgedAt        DateTime?
+  acknowledgedBy        String?
+  failureReason         String?
+  sentAt                DateTime              @default(now())
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  gpRecordUpdates       GpRecordUpdate[]
 
   @@index([patientId, status, createdAt])
   @@index([clinicianId, createdAt])
@@ -2552,31 +2609,31 @@ model GpCommunication {
 }
 
 model GpRecordUpdate {
-  id              String              @id @default(cuid())
-  patientId       String
-  patient         Patient             @relation(fields: [patientId], references: [id])
-  gpCommunicationId String?
-  gpCommunication GpCommunication?  @relation(fields: [gpCommunicationId], references: [id])
-  gpName          String
-  gpPractice      String
-  gpNhsNumber     String?
-  updateType      GpRecordUpdateType
-  status          GpRecordUpdateStatus @default(PENDING)
-  title           String
-  description     String
-  clinicalData    Json              // the data GP wants to update
-  currentValue    Json?
-  newValue        Json?
-  appliedById     String?
-  appliedBy       User?             @relation("GpRecordUpdateApplier", fields: [appliedById], references: [id])
-  appliedAt       DateTime?
-  reviewedById    String?
-  reviewedBy      User?             @relation("GpRecordUpdateReviewer", fields: [reviewedById], references: [id])
-  reviewedAt      DateTime?
-  rejectionReason String?
-  requiresClinicianApproval Boolean   @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                        String               @id @default(cuid())
+  patientId                 String
+  patient                   Patient              @relation(fields: [patientId], references: [id])
+  gpCommunicationId         String?
+  gpCommunication           GpCommunication?     @relation(fields: [gpCommunicationId], references: [id])
+  gpName                    String
+  gpPractice                String
+  gpNhsNumber               String?
+  updateType                GpRecordUpdateType
+  status                    GpRecordUpdateStatus @default(PENDING)
+  title                     String
+  description               String
+  clinicalData              Json // the data GP wants to update
+  currentValue              Json?
+  newValue                  Json?
+  appliedById               String?
+  appliedBy                 User?                @relation("GpRecordUpdateApplier", fields: [appliedById], references: [id])
+  appliedAt                 DateTime?
+  reviewedById              String?
+  reviewedBy                User?                @relation("GpRecordUpdateReviewer", fields: [reviewedById], references: [id])
+  reviewedAt                DateTime?
+  rejectionReason           String?
+  requiresClinicianApproval Boolean              @default(false)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
 
   @@index([patientId, status, createdAt])
   @@index([updateType, status])
@@ -2585,22 +2642,22 @@ model GpRecordUpdate {
 }
 
 model Hook {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  event         HookEvent
-  status        HookStatus @default(ACTIVE)
-  targetUrl     String?   // webhook URL for external hooks
-  secret        String?   // signing secret for webhook
-  isInternal    Boolean   @default(true)  // internal function hook vs external webhook
-  handlerName   String?   // name of internal handler function
-  config        Json?     // hook configuration
-  retryCount    Int       @default(3)
-  timeoutMs     Int       @default(5000)
-  createdById   String
-  createdBy     User      @relation(fields: [createdById], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  event          HookEvent
+  status         HookStatus      @default(ACTIVE)
+  targetUrl      String? // webhook URL for external hooks
+  secret         String? // signing secret for webhook
+  isInternal     Boolean         @default(true) // internal function hook vs external webhook
+  handlerName    String? // name of internal handler function
+  config         Json? // hook configuration
+  retryCount     Int             @default(3)
+  timeoutMs      Int             @default(5000)
+  createdById    String
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   hookExecutions HookExecution[]
 
   @@index([event, status])
@@ -2608,17 +2665,17 @@ model Hook {
 }
 
 model HookExecution {
-  id          String   @id @default(cuid())
-  hookId      String
-  hook        Hook     @relation(fields: [hookId], references: [id])
-  event       HookEvent
-  status      String   // SUCCESS, FAILED, TIMEOUT, RETRYING
-  attempt     Int      @default(1)
-  requestPayload Json?
+  id              String    @id @default(cuid())
+  hookId          String
+  hook            Hook      @relation(fields: [hookId], references: [id])
+  event           HookEvent
+  status          String // SUCCESS, FAILED, TIMEOUT, RETRYING
+  attempt         Int       @default(1)
+  requestPayload  Json?
   responsePayload Json?
-  errorMessage String?
-  durationMs  Int?
-  executedAt  DateTime @default(now())
+  errorMessage    String?
+  durationMs      Int?
+  executedAt      DateTime  @default(now())
 
   @@index([hookId, executedAt])
   @@index([event, status])
@@ -2626,20 +2683,20 @@ model HookExecution {
 }
 
 model Rail {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  event       HookEvent  // which event this rail guards
-  scope       RailScope  @default(GLOBAL)
-  scopeValue  String?    // role name, patient id, or org id depending on scope
-  severity    RailSeverity @default(WARNING)
-  action      RailAction @default(WARN)
-  condition   Json       // the guardrail condition (JSON logic)
-  isEnabled   Boolean    @default(true)
-  createdById String
-  createdBy   User       @relation(fields: [createdById], references: [id])
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  event          HookEvent // which event this rail guards
+  scope          RailScope       @default(GLOBAL)
+  scopeValue     String? // role name, patient id, or org id depending on scope
+  severity       RailSeverity    @default(WARNING)
+  action         RailAction      @default(WARN)
+  condition      Json // the guardrail condition (JSON logic)
+  isEnabled      Boolean         @default(true)
+  createdById    String
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   railViolations RailViolation[]
 
   @@index([event, scope, isEnabled])
@@ -2647,23 +2704,23 @@ model Rail {
 }
 
 model RailViolation {
-  id          String   @id @default(cuid())
-  railId      String
-  rail        Rail     @relation(fields: [railId], references: [id])
-  event       HookEvent
-  patientId   String?
-  patient     Patient? @relation(fields: [patientId], references: [id])
-  actorId     String?
-  actor       User?    @relation("RailViolationActor", fields: [actorId], references: [id])
-  severity    RailSeverity
-  actionTaken RailAction
-  context     Json     // the context that triggered the violation
-  resolved    Boolean  @default(false)
-  resolvedById String?
-  resolvedBy  User?    @relation("RailViolationResolver", fields: [resolvedById], references: [id])
-  resolvedAt  DateTime?
+  id             String       @id @default(cuid())
+  railId         String
+  rail           Rail         @relation(fields: [railId], references: [id])
+  event          HookEvent
+  patientId      String?
+  patient        Patient?     @relation(fields: [patientId], references: [id])
+  actorId        String?
+  actor          User?        @relation("RailViolationActor", fields: [actorId], references: [id])
+  severity       RailSeverity
+  actionTaken    RailAction
+  context        Json // the context that triggered the violation
+  resolved       Boolean      @default(false)
+  resolvedById   String?
+  resolvedBy     User?        @relation("RailViolationResolver", fields: [resolvedById], references: [id])
+  resolvedAt     DateTime?
   resolutionNote String?
-  createdAt   DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([railId, createdAt])
   @@index([patientId, createdAt])
@@ -2671,17 +2728,17 @@ model RailViolation {
 }
 
 model ServiceCoordination {
-  id           String   @id @default(cuid())
-  module       String   // module name (e.g., 'reports', 'live-data', 'onboarding')
-  serviceName  String
-  status       String   // HEALTHY, DEGRADED, DOWN, MAINTENANCE
+  id            String    @id @default(cuid())
+  module        String // module name (e.g., 'reports', 'live-data', 'onboarding')
+  serviceName   String
+  status        String // HEALTHY, DEGRADED, DOWN, MAINTENANCE
   lastHeartbeat DateTime?
-  lastCheck    DateTime?
-  metadata     Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  lastCheck     DateTime?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
+  @@unique([module, serviceName])
   @@index([module, status])
   @@index([updatedAt])
-  @@unique([module, serviceName])
 }

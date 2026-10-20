@@ -1,8 +1,156 @@
-export default function Home() {
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { AdminShell } from "../components/admin-shell";
+
+type CommandCenter = {
+  metrics: {
+    patients: number;
+    appointments: number;
+    assessments: number;
+    openTasks: number;
+    openComplaints: number;
+    auditAlerts: number;
+  };
+  taskQueues: Array<{ type: string; count: number }>;
+  workflow: Array<{ stage: string; count: number }>;
+};
+
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+export default function AdminHomePage() {
+  const [data, setData] = useState<CommandCenter | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [section, setSection] = useState("operations");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!apiBase) throw new Error("The administration API is not configured.");
+      const token = sessionStorage.getItem("neurocare.accessToken");
+      const response = await fetch(`${apiBase}/admin/command-center`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 401) throw new Error("Sign in with an administrator account.");
+        if (response.status === 403)
+          throw new Error("Your account is not authorised for operations access.");
+        throw new Error("Unable to load operational data.");
+      }
+      setData(await response.json());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load operational data.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   return (
-    <main>
-      <h1>NeuroCare Platform</h1>
-      <p>System Online</p>
-    </main>
+    <AdminShell active={section} onSelect={setSection}>
+      <header className="ops-header">
+        <div>
+          <p className="eyebrow">Live operational data</p>
+          <h1>Operations</h1>
+          <p className="muted">What is preventing the service from operating smoothly?</p>
+        </div>
+        <button className="ops-action" onClick={() => void load()}>
+          Refresh
+        </button>
+      </header>
+
+      {error && (
+        <div role="alert" className="ops-error">
+          <p>{error}</p>
+          <button className="ops-action" onClick={() => void load()}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {loading && <p className="muted">Loading operational state…</p>}
+
+      {data && !loading && (
+        <>
+          <section aria-labelledby="service-now" className="ops-block">
+            <h2 id="service-now">Service now</h2>
+            <div className="ops-metrics">
+              <div className="ops-metric">
+                <span>Open clinical tasks</span>
+                <strong>{data.metrics.openTasks}</strong>
+              </div>
+              <div className="ops-metric">
+                <span>Unresolved complaints</span>
+                <strong>{data.metrics.openComplaints}</strong>
+              </div>
+              <div className="ops-metric">
+                <span>Audit warnings</span>
+                <strong>{data.metrics.auditAlerts}</strong>
+              </div>
+              <div className="ops-metric">
+                <span>Active appointments</span>
+                <strong>{data.metrics.appointments}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="pipeline" className="ops-block">
+            <h2 id="pipeline">Patient pipeline</h2>
+            {data.workflow.length === 0 ? (
+              <p className="muted">No pathway transitions recorded yet.</p>
+            ) : (
+              <table className="ops-table">
+                <caption className="sr-only">Patients by current pathway stage</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Stage</th>
+                    <th scope="col">Patients</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.workflow.map((row) => (
+                    <tr key={row.stage}>
+                      <th scope="row">{row.stage.replaceAll("_", " ")}</th>
+                      <td>{row.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section aria-labelledby="queues" className="ops-block">
+            <h2 id="queues">Operational queues</h2>
+            {data.taskQueues.length === 0 ? (
+              <p className="muted">No open operational queues.</p>
+            ) : (
+              <table className="ops-table">
+                <caption className="sr-only">Open items by queue type</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Queue</th>
+                    <th scope="col">Open</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.taskQueues.map((row) => (
+                    <tr key={row.type}>
+                      <th scope="row">{row.type.replaceAll("_", " ")}</th>
+                      <td>{row.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </>
+      )}
+    </AdminShell>
   );
 }

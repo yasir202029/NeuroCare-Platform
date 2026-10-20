@@ -18,6 +18,9 @@ RUN corepack prepare pnpm@latest --activate && corepack enable
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY tsconfig.base.json ./
 COPY apps/neurocare-platform/package.json ./apps/neurocare-platform/package.json
+# Workspace packages the app depends on must be present for the lockfile to
+# resolve, and their sources are needed again at build time.
+COPY packages ./packages
 RUN pnpm install --frozen-lockfile --ignore-scripts=false && \
     pnpm store prune
 
@@ -33,6 +36,7 @@ ENV PATH=/usr/local/lib/node_modules/corepack/shims:$PATH
 
 COPY --from=prereqs /app /app
 COPY apps/neurocare-platform ./apps/neurocare-platform
+COPY packages ./packages
 
 WORKDIR /app/apps/neurocare-platform
 

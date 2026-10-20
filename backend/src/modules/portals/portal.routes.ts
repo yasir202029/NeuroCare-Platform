@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { requireAuth, requirePortal, portalsForRoles, type PortalName } from '../../middleware/auth.js';
 import { asyncHandler } from '../../shared/http.js';
 import { prisma } from '../../shared/db.js';
+import { PatientJourneyService } from './patient-journey.service.js';
 import { badRequest } from '../../shared/errors.js';
 
 const router = Router();
@@ -27,4 +28,10 @@ router.get('/:portal/summary', asyncHandler(async (req, res, next) => {
     res.json({ portal, summary: summaries[portal] });
   });
 }));
+/** Patient journey projection — derives the next action from real domain state. */
+router.get('/patient/next-action', asyncHandler(async (req, res) => {
+  const service = new PatientJourneyService();
+  res.json(await service.project(req.user!.id));
+}));
+
 export default router;

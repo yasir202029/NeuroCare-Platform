@@ -27,15 +27,14 @@ export const metadata: Metadata = {
   authors: [{ name: "NeuroCare Platform", url: siteUrl }],
   creator: "NeuroCare Platform",
   publisher: "NeuroCare Platform",
+  // Private patient surface: excluded from indexing. Authentication and
+  // authorisation on the backend remain the actual protection.
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
     googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
+      index: false,
+      follow: false,
     },
   },
   openGraph: {

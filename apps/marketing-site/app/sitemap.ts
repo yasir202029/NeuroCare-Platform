@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL, publicPages } from "./content";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://neurocare.example.com";
-  return [
-    { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    { url: `${base}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${base}/contact`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-  ];
+  return publicPages.map((page) => ({
+    url: `${SITE_URL}${page.path === "/" ? "" : page.path}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: page.path === "/" ? 1 : 0.7,
+  }));
 }

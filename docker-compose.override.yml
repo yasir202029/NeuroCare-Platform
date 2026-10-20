@@ -21,3 +21,7 @@ services:
   clinical-ai:
     ports:
       - "${CLINICAL_AI_PORT:-8001}:8001"
+
+  content-validator:
+    ports:
+      - "${CONTENT_VALIDATOR_PORT:-8002}:8002"

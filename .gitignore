@@ -66,3 +66,7 @@ Thumbs.db
 
 # Local dev TLS certs (self-signed, never commit)
 ssl/*.pem
+
+# Python bytecode
+__pycache__/
+*.py[cod]

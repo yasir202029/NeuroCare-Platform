@@ -172,6 +172,24 @@ services:
     networks:
       - neurocare-network
 
+  ###############################################################################
+  # CONTENT VALIDATOR (Python/FastAPI) — public marketing content + SEO rules
+  ###############################################################################
+  content-validator:
+    build:
+      context: ./python-services/content-validator
+    environment:
+      PORT: 8002
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - neurocare-network
+
 volumes:
   pgdata:
 

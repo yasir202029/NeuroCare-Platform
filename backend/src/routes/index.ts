@@ -28,7 +28,9 @@ import railRoutes from '../modules/rails/rail.routes.js';
 import coordinationRoutes from '../modules/coordination/coordination.routes.js';
 import configRoutes from '../modules/config/config.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
+import questionnaireRoutes from '../modules/questionnaires/questionnaires.routes.js';
 import documentRoutes from '../modules/documents/documents.routes.js';
+import documentRequestRoutes from '../modules/documents/document-requests.routes.js';
 import clinicalAiRoutes from '../modules/clinical-ai/clinical-ai.routes.js';
 import reportEngineRoutes from '../modules/report-engine/report-engine.routes.js';
 import gdprRoutes from '../modules/gdpr/gdpr.routes.js';
@@ -66,6 +68,10 @@ router.use('/rails', railRoutes);
 router.use('/coordination', coordinationRoutes);
 router.use('/config', configRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/questionnaires', questionnaireRoutes);
+// Document-request routes are mounted before the generic document routes so
+// that '/documents/requests' is not shadowed by the '/documents/:id' route.
+router.use('/documents', documentRequestRoutes);
 router.use('/documents', documentRoutes);
 router.use('/clinical-ai', clinicalAiRoutes);
 router.use('/report-engine', reportEngineRoutes);

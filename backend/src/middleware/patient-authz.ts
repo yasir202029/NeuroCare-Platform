@@ -6,14 +6,20 @@ import { unauthorized, forbidden, notFound } from "../shared/errors.js";
 
 /**
  * Extracts a patientId from route params, query, or body.
- * Looks for: params.patientId, params.id, query.patientId, body.patientId.
+ *
+ * Only an explicitly named `patientId` is accepted. A generic `:id` is NOT
+ * treated as a patient id, because many routes use `:id` for a different
+ * resource (a document, a request) and resolving those as patient ids would
+ * either deny legitimate access or, worse, authorise against the wrong record.
+ * Routes that own a differently-named patient id must check ownership in the
+ * handler against the resource's own patientId.
  */
 function extractPatientId(req: {
   params: Record<string, unknown>;
   query: Record<string, unknown>;
   body: unknown;
 }): string | undefined {
-  const fromParams = req.params.patientId ?? req.params.id;
+  const fromParams = req.params.patientId;
   const param =
     typeof fromParams === "string"
       ? fromParams

@@ -6,11 +6,12 @@ import NotificationBell from "./NotificationBell";
 
 const nav = [
   { href: "/patient", label: "Home" },
-  { href: "/patient/journey", label: "My journey" },
   { href: "/patient/book", label: "Appointments" },
+  { href: "/patient/questionnaires", label: "Questionnaires" },
+  { href: "/patient/journey", label: "My journey" },
   { href: "/documents", label: "Documents" },
-  { href: "/messages", label: "Messages" },
-  { href: "/profile", label: "Profile" },
+  { href: "/notifications", label: "Messages" },
+  { href: "/onboarding", label: "My details" },
 ];
 
 export function PatientShell({ children }: { children: React.ReactNode }) {

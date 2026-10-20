@@ -6,6 +6,7 @@ import { asyncHandler } from '../../shared/http.js';
 import { audit } from '../../middleware/audit.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { requirePatientAccess } from '../../middleware/patient-authz.js';
+import { assertPatientAccess } from '../../services/patient-authz.service.js';
 import { badRequest, notFound } from '../../shared/errors.js';
 
 const router = Router();
@@ -60,7 +61,6 @@ router.post(
 
 router.get(
   '/:id',
-  requirePatientAccess('params'),
   asyncHandler(async (req, res) => {
     const id = typeof req.params.id === 'string' ? req.params.id : String(req.params.id[0]);
     const document = await prisma.document.findUnique({
@@ -68,6 +68,9 @@ router.get(
       include: { versions: true, accessLogs: { orderBy: { createdAt: 'desc' }, take: 5 } },
     });
     if (!document) throw notFound('Document not found');
+    // The document id is not a patient id, so ownership is checked against the
+    // document's own patient rather than through the generic middleware.
+    await assertPatientAccess(req.user!.id, req.user!.roles, document.patientId);
     await prisma.documentAccessLog.create({
       data: { documentId: id, actorId: req.user!.id, action: 'VIEW', ipAddress: req.ip },
     });
