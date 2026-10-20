@@ -1,7 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./styles.css";
-import { SkipLink } from "../components/accessibility";
-
 const siteName = "NeuroCare Platform";
 const siteDescription =
   "Connected patient and clinical operations for remote ADHD assessment, titration, and shared care in the UK.";
@@ -66,6 +64,12 @@ export const metadata: Metadata = {
   category: "health",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#145742",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -113,14 +117,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <SkipLink />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-#ffffff focus:text-#145742 focus:border focus:border-#145742 focus:rounded-md focus:font-semibold focus:text-sm"
-        >
+        <a className="skip-link" href="#main">
           Skip to main content
         </a>
-        <main id="main-content">{children}</main>
+        <main id="main">{children}</main>
       </body>
     </html>
   );

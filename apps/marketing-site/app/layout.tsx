@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./styles.css";
 import { ORG_DESCRIPTION, SITE_NAME, SITE_URL } from "./content";
 
@@ -33,6 +33,12 @@ export const metadata: Metadata = {
   },
   category: "medical",
   formatDetection: { email: false, address: false, telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#145742",
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

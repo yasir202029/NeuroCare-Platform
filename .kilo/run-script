@@ -8,8 +8,9 @@
 pnpm install --frozen-lockfile
 
 # Bring up the full docker-compose stack with local port overrides
-docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+# (scoped to the core services; Python sidecars start on demand via compose)
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d --build postgres migrate backend frontend web clinician admin
 
 # Show service status and follow logs
 docker-compose -f docker-compose.yml -f docker-compose.override.yml ps
-docker-compose -f docker-compose.yml -f docker-compose.override.yml logs -f --tail=50 backend frontend web
+docker-compose -f docker-compose.yml -f docker-compose.override.yml logs -f --tail=50 backend frontend web clinician admin
