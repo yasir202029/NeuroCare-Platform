@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearAccessToken } from "../lib/session";
 
 export type ClinicianSection = {
   id: string;
@@ -37,7 +38,23 @@ export function ClinicianShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const signOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // The local session is cleared regardless of the upstream response.
+    } finally {
+      clearAccessToken();
+      setSigningOut(false);
+      router.push("/login");
+      router.refresh();
+    }
+  };
 
   return (
     <div className="clinic-shell">
@@ -68,6 +85,9 @@ export function ClinicianShell({
         <p className="nav-note">
           Access is role-scoped and audited. Records shown are limited to patients assigned to you.
         </p>
+        <button type="button" className="signout" onClick={() => void signOut()} disabled={signingOut}>
+          {signingOut ? "Signing out…" : "Sign out"}
+        </button>
       </aside>
       <div>
         <button

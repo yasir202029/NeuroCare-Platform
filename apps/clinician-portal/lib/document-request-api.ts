@@ -1,4 +1,5 @@
 const API = "/api/v1";
+import { authHeaders } from "./session";
 
 export type ClinicianDocumentRequest = {
   id: string;
@@ -12,10 +13,6 @@ export type ClinicianDocumentRequest = {
   patient?: { id: string; user: { firstName: string; lastName: string } };
   document?: { id: string; name: string; mimeType: string } | null;
 };
-
-function authHeaders() {
-  return { Authorization: `Bearer ${sessionStorage.getItem("neurocare.accessToken") ?? ""}` };
-}
 
 /** The requesting clinician's own document requests. */
 export async function getMyDocumentRequests(): Promise<{ requests: ClinicianDocumentRequest[] }> {

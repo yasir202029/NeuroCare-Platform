@@ -36,6 +36,7 @@ import reportEngineRoutes from '../modules/report-engine/report-engine.routes.js
 import gdprRoutes from '../modules/gdpr/gdpr.routes.js';
 import telehealthRoutes from '../modules/telehealth/telehealth.routes.js';
 import saasPlansRoutes from '../modules/saas-plans/saas-plans.routes.js';
+import monitoringRoutes from '../modules/monitoring/monitoring.routes.js';
 
 const router = Router();
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'neurocare-backend', timestamp: new Date().toISOString() }));
@@ -78,4 +79,5 @@ router.use('/report-engine', reportEngineRoutes);
 router.use('/gdpr', gdprRoutes);
 router.use('/telehealth', telehealthRoutes);
 router.use('/saas-plans', saasPlansRoutes);
+router.use('/monitoring', monitoringRoutes);
 export default router;

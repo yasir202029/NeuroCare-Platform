@@ -432,6 +432,161 @@ textarea {
   cursor: pointer;
 }
 
+/* ---- Sign in / sign out ---- */
+.signin {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+  background: hsl(var(--clarity-bg-subtle));
+}
+
+.signin-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 4px;
+  background: hsl(var(--clarity-bg-surface));
+  border: 1px solid hsl(var(--clarity-border-default));
+  border-radius: var(--clarity-radius-lg, 14px);
+  padding: 26px;
+  box-shadow: 0 18px 40px hsl(var(--clarity-text-primary) / 0.08);
+}
+
+.signin-card h1 {
+  margin: 2px 0 4px;
+}
+
+.signin-card .field {
+  margin-top: 14px;
+}
+
+.signin-card .follow-up-actions {
+  margin-top: 18px;
+}
+
+.signout {
+  margin-top: 12px;
+  border: 1px solid hsl(var(--clarity-border-default));
+  background: transparent;
+  color: hsl(var(--clarity-text-secondary));
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 11px;
+  border-radius: var(--clarity-radius-md);
+  cursor: pointer;
+}
+
+.signout:hover {
+  color: hsl(var(--clarity-text-primary));
+  background: hsl(var(--clarity-bg-subtle));
+}
+
+/* ---- Monitoring & risk review panel ---- */
+.monitoring-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.record-card {
+  border-bottom: 1px solid hsl(var(--clarity-border-default) / 0.6);
+  padding: 13px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.record-card:last-child {
+  border-bottom: 0;
+}
+
+.record-card p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.record-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.tag-critical {
+  background: hsl(var(--clarity-status-danger) / 0.12);
+  border-color: hsl(var(--clarity-status-danger) / 0.35);
+  color: hsl(var(--clarity-status-danger));
+}
+
+.tag-warning {
+  background: hsl(var(--clarity-status-warning) / 0.14);
+  border-color: hsl(var(--clarity-status-warning) / 0.4);
+  color: hsl(var(--clarity-status-warning));
+}
+
+.tag-ok {
+  background: hsl(var(--clarity-status-success) / 0.12);
+  border-color: hsl(var(--clarity-status-success) / 0.35);
+  color: hsl(var(--clarity-status-success));
+}
+
+.alert-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.alert-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.alert-message {
+  flex: 1 1 240px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--clarity-text-secondary));
+}
+
+.follow-up-actions select {
+  width: auto;
+  min-width: 170px;
+  font-size: 12px;
+  padding: 7px 9px;
+}
+
 .copilot-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

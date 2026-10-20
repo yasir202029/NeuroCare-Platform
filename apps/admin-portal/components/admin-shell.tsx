@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { clearAccessToken } from "../lib/session";
 export type AdminSection = {
   id: string;
   label: string;
@@ -29,6 +32,23 @@ export function AdminShell({
   onSelect: (id: string) => void;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const signOut = async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // The local session is cleared regardless of the upstream response.
+    } finally {
+      clearAccessToken();
+      setSigningOut(false);
+      router.push("/login");
+      router.refresh();
+    }
+  };
+
   return (
     <div className="ops-shell">
       <aside className="ops-nav">
@@ -56,6 +76,9 @@ export function AdminShell({
           Operational access only. Clinical content is not exposed here; clinical access is granted
           through assigned-patient permissions.
         </p>
+        <button type="button" className="ops-signout" onClick={() => void signOut()} disabled={signingOut}>
+          {signingOut ? "Signing out…" : "Sign out"}
+        </button>
       </aside>
       <main className="ops-content" id="main">{children}</main>
     </div>

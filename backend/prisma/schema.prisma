@@ -639,6 +639,7 @@ model User {
   reviewedFormSubmissions    ClinicalFormSubmission[] @relation("FormSubmissionReviewer")
   documentRequestsMade       DocumentRequest[]        @relation("DocumentRequester")
   riskScoresAuthored         ClinicalRiskScore[]      @relation("RiskScoreAuthor")
+  riskEntryAuthor            ClinicalRiskEntry[]      @relation("RiskEntryAuthor")
   rankingsReviewed           PatientRanking[]         @relation("RankingReviewer")
   safetyAlertsAuthored       MedicationSafetyAlert[]  @relation("SafetyAlertAuthor")
   safetyAlertsAcknowledged   MedicationSafetyAlert[]  @relation("SafetyAlertAcknowledger")
@@ -816,6 +817,7 @@ model Patient {
   organization         Organization?            @relation(fields: [organizationId], references: [id])
   contacts             PatientContact[]
   assessments          Assessment[]
+  riskEntries          ClinicalRiskEntry[]
   appointments         Appointment[]
   documents            Document[]
   invoices             Invoice[]
@@ -1196,6 +1198,11 @@ model PhysicalHealthAlert {
   acknowledgedAt DateTime?
   review         PhysicalHealthReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   createdAt      DateTime             @default(now())
+
+  // Supports the clinician safety queue: filter on unacknowledged alerts,
+  // newest first, and join from the review to the patient.
+  @@index([acknowledgedAt, severity, createdAt])
+  @@index([reviewId])
 }
 
 model ClinicalNote {
@@ -2118,6 +2125,57 @@ enum RiskBand {
   HIGH
   CRITICAL
 }
+
+
+enum RiskDomain {
+  SELF_HARM
+  SUICIDE
+  RISK_TO_OTHERS
+  VULNERABILITY
+  SAFEGUARDING
+  EXPLOITATION
+  SUBSTANCE_USE
+  DOMESTIC_ABUSE
+}
+
+enum RiskLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum RiskReviewStatus {
+  PENDING
+  IN_PROGRESS
+  ACTIONED
+}
+
+model ClinicalRiskEntry {
+  id                String           @id @default(cuid())
+  patientId         String
+  clinicianId       String?
+  clinician         User?            @relation("RiskEntryAuthor", fields: [clinicianId], references: [id])
+  domain            RiskDomain
+  currentRisk       RiskLevel
+  historicalRisk    RiskLevel?
+  protectiveFactors String?
+  actions           String?
+  notes             String?
+  reviewStatus      RiskReviewStatus @default(PENDING)
+  reviewedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  patient       Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId, createdAt])
+  @@index([domain, currentRisk])
+  @@index([patientId, updatedAt])
+}
+
+
+
 
 model PatientRanking {
   id           String    @id @default(cuid())

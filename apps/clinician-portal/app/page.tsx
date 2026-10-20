@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClinicianShell } from "../components/clinician-shell";
+import { MonitoringRiskPanel } from "../components/monitoring-risk-panel";
 import { getReviewQueue, reviewQuestionnaire, type ReviewQueueItem } from "../lib/questionnaire-api";
 import {
   getMyDocumentRequests,
@@ -9,6 +10,12 @@ import {
   reviewDocumentRequest,
   type ClinicianDocumentRequest,
 } from "../lib/document-request-api";
+import {
+  acknowledgeAlert,
+  listOpenAlerts,
+  type OpenAlert,
+} from "../lib/monitoring-api";
+import { getAccessToken } from "../lib/session";
 
 type Patient = {
   id: string;
@@ -32,7 +39,10 @@ type Workspace = {
   earnings: { serviceLine: string; _sum: { amountPence: number | null }; _count: { id: number } }[];
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+// API calls go through the same origin and are proxied to the backend by the
+// rewrite in next.config.mjs. This keeps the browser same-origin (no CORS
+// preflight) and never exposes the backend's internal address.
+const apiBase = "/api/v1";
 const nameOf = (patient: Patient) => `${patient.user.firstName} ${patient.user.lastName}`;
 const money = (pence: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(pence / 100);
@@ -56,10 +66,14 @@ export default function Page() {
   const [documentRequests, setDocumentRequests] = useState<ClinicianDocumentRequest[]>([]);
   const [documentOutcome, setDocumentOutcome] = useState<string | null>(null);
   const [requestTitle, setRequestTitle] = useState("");
+  const [safetyAlerts, setSafetyAlerts] = useState<OpenAlert[]>([]);
+  const [safetyTotal, setSafetyTotal] = useState(0);
+  const [safetyError, setSafetyError] = useState<string | null>(null);
+  const [safetyOutcome, setSafetyOutcome] = useState<string | null>(null);
+  const [safetyBusy, setSafetyBusy] = useState(false);
 
   const request = async (path: string, options?: RequestInit) => {
-    if (!apiBase) throw new Error("The clinician API is not configured.");
-    const token = sessionStorage.getItem("neurocare.accessToken");
+    const token = getAccessToken();
     if (!token) throw new Error("Sign in to access live patient records.");
     const response = await fetch(`${apiBase}${path}`, {
       ...options,
@@ -103,10 +117,45 @@ export default function Page() {
     }
   }, []);
 
+  const loadSafetyQueue = useCallback(async () => {
+    try {
+      const queue = await listOpenAlerts();
+      setSafetyAlerts(queue.alerts);
+      setSafetyTotal(queue.totalCount);
+      setSafetyError(null);
+    } catch (cause) {
+      setSafetyError(
+        cause instanceof Error ? cause.message : "Unable to load the safety alert queue.",
+      );
+    }
+  }, []);
+
   useEffect(() => {
     void load();
     void loadReviewQueue();
-  }, [load, loadReviewQueue]);
+    void loadSafetyQueue();
+  }, [load, loadReviewQueue, loadSafetyQueue]);
+
+  const acknowledgeSafetyAlert = async (alertId: string) => {
+    setSafetyBusy(true);
+    setSafetyError(null);
+    setSafetyOutcome(null);
+    try {
+      const result = await acknowledgeAlert(alertId);
+      setSafetyOutcome(
+        result.alreadyAcknowledged
+          ? "That alert was already acknowledged — no duplicate entry was written."
+          : "Alert acknowledged and removed from the safety queue.",
+      );
+      await loadSafetyQueue();
+    } catch (cause) {
+      setSafetyError(
+        cause instanceof Error ? cause.message : "Unable to acknowledge the alert.",
+      );
+    } finally {
+      setSafetyBusy(false);
+    }
+  };
 
   const completeReview = async (submissionId: string) => {
     setReviewBusy(true);
@@ -161,10 +210,10 @@ export default function Page() {
     return rows;
   }, [data]);
 
-  const open = async (id: string) => {
+  const open = async (id: string, targetTab = "Overview") => {
     try {
       setPatient(await request(`/clinician/patients/${id}`));
-      setTab("Overview");
+      setTab(targetTab);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to open patient workspace.");
     }
@@ -281,10 +330,16 @@ export default function Page() {
     return (
       <ClinicianShell active={section} onSelect={setSection}>
         <h1>My Clinic Today</h1>
-        <p className="muted">{error}</p>
-        <button className="save" onClick={() => void load()}>
-          Retry connection
-        </button>
+        <p className="error">{error}</p>
+        {error.startsWith("Sign in") ? (
+          <a className="save" href="/login" style={{ display: "inline-block" }}>
+            Sign in to the clinical workstation
+          </a>
+        ) : (
+          <button className="save" onClick={() => void load()}>
+            Retry connection
+          </button>
+        )}
       </ClinicianShell>
     );
 
@@ -398,6 +453,57 @@ export default function Page() {
         </section>
 
         <section className="queue">
+          <p className="eyebrow">{safetyTotal} awaiting review</p>
+          <h2>Safety alerts</h2>
+          {safetyError && <p className="error">{safetyError}</p>}
+          {safetyOutcome && (
+            <p className="muted" role="status">
+              {safetyOutcome}
+            </p>
+          )}
+          {safetyTotal > safetyAlerts.length && (
+            <p className="muted">
+              Showing the {safetyAlerts.length} most severe of {safetyTotal} open alerts. Older
+              alerts stay in the patient record until they are acknowledged.
+            </p>
+          )}
+          <div className="queue-items">
+            {safetyAlerts.length > 0 ? (
+              safetyAlerts.map((alert) => (
+                <div key={alert.id} className="patient-row" style={{ cursor: "default" }}>
+                  <span className="avatar">
+                    {(alert.patientFirstName?.[0] ?? "?").toUpperCase()}
+                    {(alert.patientLastName?.[0] ?? "").toUpperCase()}
+                  </span>
+                  <span>
+                    <b>
+                      {alert.patientFirstName} {alert.patientLastName}
+                    </b>
+                    <small>
+                      {alert.severity} · {alert.metric.replaceAll("_", " ")} — {alert.message}
+                    </small>
+                  </span>
+                  <span className="follow-up-actions">
+                    <button
+                      className="save"
+                      disabled={safetyBusy}
+                      onClick={() => void acknowledgeSafetyAlert(alert.id)}
+                    >
+                      Acknowledge
+                    </button>
+                    <button onClick={() => void open(alert.patientId, "Monitoring & Risk")}>
+                      Open monitoring
+                    </button>
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No unacknowledged monitoring alerts for your patients.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="queue">
           <p className="eyebrow">Caseload</p>
           <h2>My patients</h2>
           <div className="queue-items">
@@ -473,7 +579,7 @@ export default function Page() {
                 "Assessment",
                 "ADHD",
                 "ASD",
-                "Physical Health",
+                "Monitoring & Risk",
                 "Documents",
                 "Messages",
                 "Reports",
@@ -531,6 +637,8 @@ export default function Page() {
                   <button onClick={() => void saveReport(true)}>Approve report</button>
                 </div>
               </section>
+            ) : tab === "Monitoring & Risk" ? (
+              <MonitoringRiskPanel patientId={patient.id} />
             ) : tab === "Documents" ? (
               <section className="follow-up">
                 <h3>Request supporting evidence</h3>

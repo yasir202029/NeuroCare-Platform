@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+// Server-side only: inside Docker this is the backend service name
+// (http://backend:4000); localhost is not reachable from the app container.
+const apiBase = (
+  process.env.API_INTERNAL_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  "http://localhost:4000"
+).replace(/\/+$/, "");
 const secureCookie = process.env.NODE_ENV === "production" ? "; Secure" : "";
 
 export async function forwardAuthRequest(path: string, body?: unknown) {

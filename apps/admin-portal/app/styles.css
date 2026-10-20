@@ -215,6 +215,83 @@ h2 {
   gap: 14px;
 }
 
+/* ---- Sign in ---- */
+.signin {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+  background: hsl(var(--clarity-bg-subtle));
+}
+
+.signin-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 4px;
+  background: hsl(var(--clarity-bg-surface));
+  border: 1px solid hsl(var(--clarity-border-default));
+  border-radius: var(--clarity-radius-lg, 14px);
+  padding: 26px;
+  box-shadow: 0 18px 40px hsl(var(--clarity-text-primary) / 0.08);
+}
+
+.signin-card h1 {
+  margin: 2px 0 4px;
+}
+
+.signin-card .field {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.signin-card .field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: hsl(var(--clarity-text-secondary));
+}
+
+.signin-card input {
+  width: 100%;
+  border: 1px solid hsl(var(--clarity-border-default));
+  border-radius: var(--clarity-radius-md);
+  background: hsl(var(--clarity-bg-surface));
+  padding: 9px 10px;
+  color: hsl(var(--clarity-text-primary));
+  font: inherit;
+}
+
+.signin-card .error {
+  border: 1px solid hsl(var(--clarity-status-danger) / 0.4);
+  background: hsl(var(--clarity-status-danger) / 0.07);
+  border-radius: var(--clarity-radius-md);
+  padding: 11px 14px;
+  margin: 14px 0 0;
+  color: hsl(var(--clarity-text-primary));
+}
+
+.signin-card .follow-up-actions {
+  margin-top: 18px;
+}
+
+/* ---- Sign out ---- */
+.ops-signout {
+  margin-top: 12px;
+  border: 1px solid hsl(var(--clarity-border-default));
+  background: transparent;
+  color: hsl(var(--clarity-text-secondary));
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 11px;
+  border-radius: var(--clarity-radius-md);
+  cursor: pointer;
+}
+
+.ops-signout:hover {
+  color: hsl(var(--clarity-text-primary));
+  background: hsl(var(--clarity-bg-subtle));
+}
+
 /* ---- Blocks ---- */
 .ops-block {
   margin-bottom: 28px;

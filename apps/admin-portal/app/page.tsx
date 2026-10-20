@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AdminShell } from "../components/admin-shell";
+import { getAccessToken } from "../lib/session";
 
 type CommandCenter = {
   metrics: {
@@ -16,7 +17,9 @@ type CommandCenter = {
   workflow: Array<{ stage: string; count: number }>;
 };
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+// API calls go through the same origin and are proxied to the backend by the
+// rewrite in next.config.mjs, so the browser never makes a cross-origin call.
+const apiBase = "/api/v1";
 
 export default function AdminHomePage() {
   const [data, setData] = useState<CommandCenter | null>(null);
@@ -28,10 +31,10 @@ export default function AdminHomePage() {
     setLoading(true);
     setError(null);
     try {
-      if (!apiBase) throw new Error("The administration API is not configured.");
-      const token = sessionStorage.getItem("neurocare.accessToken");
+      const token = getAccessToken();
+      if (!token) throw new Error("Sign in with an administrator account.");
       const response = await fetch(`${apiBase}/admin/command-center`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
       if (!response.ok) {
@@ -68,9 +71,15 @@ export default function AdminHomePage() {
       {error && (
         <div role="alert" className="ops-error">
           <p>{error}</p>
-          <button className="ops-action" onClick={() => void load()}>
-            Retry
-          </button>
+          {error.startsWith("Sign in") ? (
+            <a className="ops-action" href="/login" style={{ display: "inline-block" }}>
+              Sign in
+            </a>
+          ) : (
+            <button className="ops-action" onClick={() => void load()}>
+              Retry
+            </button>
+          )}
         </div>
       )}
 

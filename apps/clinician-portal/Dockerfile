@@ -42,6 +42,10 @@ WORKDIR /app/apps/clinician-portal
 
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# Server-side only: the address the Next server proxies /api/* to. Inside
+# Docker this is the backend service name, not localhost.
+ARG API_INTERNAL_URL=http://backend:4000
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 
 RUN pnpm run build && \
     cd /app && \
@@ -56,6 +60,7 @@ ENV NODE_ENV=production
 ENV PORT=3005
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
+ENV API_INTERNAL_URL=http://backend:4000
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs

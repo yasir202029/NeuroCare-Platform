@@ -73,3 +73,71 @@ export async function getPatientClinicalNotes(patientId: string) {
   }
   return res.json();
 }
+
+export type MonitoringReview = {
+  id: string;
+  reviewDate: string;
+  bloodPressureSystolic: number | null;
+  bloodPressureDiastolic: number | null;
+  pulse: number | null;
+  weightKg: number | null;
+  heightCm: number | null;
+  bmi: number | null;
+  sleepHours: number | null;
+  appetite: string | null;
+  sideEffects: string | null;
+  notes: string | null;
+  alertCount: number;
+  alerts: {
+    id: string;
+    metric: string;
+    severity: string;
+    message: string;
+    acknowledgedAt: string | null;
+  }[];
+};
+
+export type MonitoringHistory = {
+  patientId: string;
+  reviews: MonitoringReview[];
+  totalCount: number;
+};
+
+export type SubmitMonitoringInput = {
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  pulse?: number;
+  weightKg?: number;
+  heightCm?: number;
+  bmi?: number;
+  sleepHours?: number;
+  appetite?: string;
+  sideEffects?: string;
+  notes?: string;
+};
+
+async function throwForResponse(res: Response, fallback: string): Promise<never> {
+  const err = await res.json().catch(() => ({ message: fallback }));
+  throw new Error(err?.error?.message ?? err.message ?? fallback);
+}
+
+/** Fetch the authenticated patient's own monitoring history. */
+export async function getOwnMonitoring(patientId: string): Promise<MonitoringHistory> {
+  const res = await authenticatedFetch(`${API}/monitoring/monitoring/${encodeURIComponent(patientId)}`);
+  if (!res.ok) await throwForResponse(res, "Failed to load monitoring history");
+  return res.json();
+}
+
+/** Submit a physical-health monitoring reading for the authenticated patient. */
+export async function submitOwnMonitoring(
+  patientId: string,
+  input: SubmitMonitoringInput,
+): Promise<{ reviewId: string; alertCount: number; alerts: { metric: string; severity: string }[]; recordedAt: string }> {
+  const res = await authenticatedFetch(`${API}/monitoring/monitoring/${encodeURIComponent(patientId)}/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await throwForResponse(res, "Failed to submit monitoring reading");
+  return res.json();
+}

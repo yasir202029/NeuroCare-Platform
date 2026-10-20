@@ -1,3 +1,5 @@
+import { authHeaders } from "./session";
+
 const API = "/api/v1";
 
 export type ReviewQueueItem = {
@@ -14,7 +16,7 @@ export type ReviewQueueItem = {
 /** Clinician review queue: submitted questionnaires for assigned patients. */
 export async function getReviewQueue(): Promise<{ submissions: ReviewQueueItem[] }> {
   const res = await fetch(`${API}/questionnaires/review-queue`, {
-    headers: { Authorization: `Bearer ${sessionStorage.getItem("neurocare.accessToken") ?? ""}` },
+    headers: authHeaders(),
   });
   if (!res.ok) {
     if (res.status === 401) throw new Error("Sign in to access clinical review work.");
@@ -31,10 +33,7 @@ export async function reviewQuestionnaire(
 ): Promise<{ submissionId: string; status: string; nextOwner: string; nextAction: string }> {
   const res = await fetch(`${API}/questionnaires/submissions/${submissionId}/review`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${sessionStorage.getItem("neurocare.accessToken") ?? ""}`,
-      "Content-Type": "application/json",
-    },
+    headers: authHeaders(),
     body: JSON.stringify({ notes }),
   });
   if (!res.ok) {
